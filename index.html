@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML Presentation Live Editor</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: rgba(255, 255, 255, 0.96);
+      --border: rgba(15, 23, 42, 0.12);
+      --border-strong: rgba(15, 23, 42, 0.18);
+      --text: #182033;
+      --muted: #5d6b84;
+      --accent: #0f7bff;
+      --accent-strong: #095fd4;
+      --accent-soft: rgba(15, 123, 255, 0.12);
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+      --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0c111b;
+        --panel: rgba(13, 18, 30, 0.82);
+        --panel-strong: rgba(15, 22, 35, 0.94);
+        --border: rgba(148, 163, 184, 0.16);
+        --border-strong: rgba(148, 163, 184, 0.24);
+        --text: #e6edf9;
+        --muted: #9aa8c2;
+        --accent: #58a6ff;
+        --accent-strong: #7ec0ff;
+        --accent-soft: rgba(88, 166, 255, 0.16);
+        --shadow: 0 18px 45px rgba(2, 6, 23, 0.4);
+        --shadow-soft: 0 10px 30px rgba(2, 6, 23, 0.3);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 123, 255, 0.14), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(63, 185, 80, 0.1), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.35;
+      mix-blend-mode: soft-light;
+    }
+
+    .app {
+      height: 100dvh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      backdrop-filter: blur(18px);
+      background: rgba(10, 16, 27, 0.08);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 10;
+      min-height: 84px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .topbar__title-group {
+      min-width: 0;
+    }
+
+    .topbar__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.36rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .topbar h1 {
+      margin: 0.72rem 0 0.12rem;
+      font-size: clamp(1.15rem, 1rem + 0.7vw, 1.55rem);
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .topbar p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .topbar__actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    .ghost-button,
+    .primary-button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.78rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        background-color 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        color 160ms ease;
+    }
+
+    .ghost-button {
+      color: var(--text);
+      background: var(--panel);
+      border-color: var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .ghost-button:hover,
+    .ghost-button:focus-visible {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    .primary-button {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      box-shadow: 0 18px 30px rgba(15, 123, 255, 0.26);
+    }
+
+    .primary-button:hover,
+    .primary-button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 34px rgba(15, 123, 255, 0.3);
+    }
+
+    .primary-button:focus-visible,
+    .ghost-button:focus-visible,
+    .source-input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .workspace {
+      position: relative;
+      min-height: 0;
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(20rem, 34rem) minmax(0, 1fr);
+      gap: 1rem;
+      padding: 1rem;
+      transition: grid-template-columns 220ms ease;
+      overflow: hidden;
+    }
+
+    .workspace.is-collapsed {
+      grid-template-columns: 0 minmax(0, 1fr);
+    }
+
+    .panel {
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.1rem 1.2rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-strong);
+      flex-shrink: 0;
+    }
+
+    .panel__header h2 {
+      margin: 0 0 0.28rem;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .panel__header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .source-panel {
+      position: relative;
+      transition:
+        opacity 200ms ease,
+        transform 200ms ease,
+        border-color 200ms ease;
+    }
+
+    .workspace.is-collapsed .source-panel {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-18px);
+      border-color: transparent;
+    }
+
+    .source-panel__body,
+    .preview-panel__body {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      overflow: hidden;
+    }
+
+    .source-panel__body {
+      padding: 1rem;
+    }
+
+    .preview-panel__body {
+      padding: 1rem;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 30%),
+        rgba(15, 23, 42, 0.025);
+    }
+
+    .source-input {
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(10, 18, 32, 0.08);
+      color: var(--text);
+      padding: 1rem;
+      resize: none;
+      line-height: 1.55;
+      tab-size: 2;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .helper-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .helper-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.66rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(15, 123, 255, 0.08);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .preview-stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background:
+        radial-gradient(circle at top center, rgba(15, 123, 255, 0.07), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.03));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .preview-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: inherit;
+      background: #ffffff;
+      box-shadow:
+        0 16px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .topbar__actions {
+        width: 100%;
+      }
+
+      .preview-panel__body,
+      .source-panel__body {
+        padding: 0.9rem;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(16rem, 38dvh) minmax(0, 1fr);
+      }
+
+      .workspace.is-collapsed {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr);
+      }
+
+      .workspace.is-collapsed .preview-panel {
+        grid-row: 1;
+      }
+
+      .source-panel,
+      .workspace.is-collapsed .source-panel {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        border-color: var(--border);
+      }
+
+      .workspace.is-collapsed .source-panel {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar__title-group">
+        <span class="topbar__eyebrow">Single-file visual HTML editor</span>
+        <h1>Presentation Live Editor</h1>
+        <p>Paste an existing HTML page, edit text directly in the preview, replace images, and export a clean standalone file.</p>
+      </div>
+      <div class="topbar__actions">
+        <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
+        <button class="primary-button" id="exportButton" type="button">Export Page</button>
+      </div>
+    </header>
+
+    <main class="workspace" id="workspace">
+      <section class="panel source-panel" id="sourcePanel">
+        <div class="panel__header">
+          <div>
+            <h2>Source HTML</h2>
+            <p>Paste a complete HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
+          </div>
+          <span class="helper-pill" id="sanitizationBadge">Safe preview ready</span>
+        </div>
+        <div class="source-panel__body">
+          <div class="helper-row">
+            <span>Changes render automatically in the editor.</span>
+            <span id="sourceStats">0 characters</span>
+          </div>
+          <label class="sr-only" for="sourceInput">HTML source</label>
+          <textarea class="source-input" id="sourceInput" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        </div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="panel__header">
+          <div>
+            <h2>Live Preview</h2>
+            <p>Click text to edit in place. Click any image to swap it with a local file and keep the new Base64 image in the export.</p>
+          </div>
+          <span class="helper-pill" id="editorStatus">Ready</span>
+        </div>
+        <div class="preview-panel__body">
+          <div class="helper-row">
+            <span>Preview updates from the source while keeping your in-place edits exportable.</span>
+            <span class="status" id="previewHint">Editable text and images are highlighted on hover.</span>
+          </div>
+          <div class="preview-stage" id="previewStage">
+            <iframe
+              class="preview-frame"
+              id="previewFrame"
+              title="Editable HTML preview"
+              sandbox="allow-same-origin"
+            ></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <input id="imagePicker" type="file" accept="image/*" hidden>
+
+  <script>
+    const STARTER_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Presentation</title>
+  <style>
+    :root {
+      --ink: #14213d;
+      --muted: #52607a;
+      --accent: #ef5b34;
+      --panel: #ffffff;
+      --page: linear-gradient(135deg, #f6f8fb, #eef3ff);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Aptos Display", "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .card {
+      width: min(960px, 100%);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(20, 33, 61, 0.08);
+      border-radius: 28px;
+      box-shadow: 0 24px 70px rgba(20, 33, 61, 0.12);
+      padding: clamp(1.5rem, 3vw, 3rem);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(239, 91, 52, 0.12);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 1rem 0 0.8rem;
+      font-size: clamp(2.2rem, 4vw, 4rem);
+      line-height: 1;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.04rem;
+      line-height: 1.7;
+    }
+
+    ul {
+      margin: 1.35rem 0 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .actions {
+      margin-top: 1.6rem;
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    a,
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.9rem 1.2rem;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .secondary {
+      background: rgba(20, 33, 61, 0.08);
+      color: var(--ink);
+    }
+
+    .media img {
+      width: 100%;
+      border-radius: 24px;
+      display: block;
+      object-fit: cover;
+      min-height: 320px;
+      box-shadow: 0 16px 40px rgba(20, 33, 61, 0.18);
+    }
+
+    @media (max-width: 760px) {
+      .card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <div class="card">
+      <div>
+        <span class="eyebrow">Editable demo</span>
+        <h1>Launch your next keynote faster.</h1>
+        <p>Use the source panel for raw HTML changes, then refine the visible copy directly in the preview. Click the image to replace it with a local file instantly.</p>
+        <ul>
+          <li>Live preview with safe rendering</li>
+          <li>Direct text editing on common presentation elements</li>
+          <li>One-click export as a clean standalone HTML file</li>
+        </ul>
+        <div class="actions">
+          <a class="primary" href="#">Primary action</a>
+          <button class="secondary" type="button">Secondary action</button>
+        </div>
+      </div>
+      <div class="media">
+        <img alt="Presentation illustration" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%230f7bff'/%3E%3Cstop offset='1' stop-color='%23ef5b34'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='700' rx='36' fill='%23e9f2ff'/%3E%3Ccircle cx='240' cy='250' r='150' fill='url(%23g)' opacity='0.9'/%3E%3Ccircle cx='640' cy='190' r='100' fill='%23ffffff' opacity='0.6'/%3E%3Crect x='200' y='180' width='500' height='320' rx='36' fill='%23ffffff'/%3E%3Crect x='240' y='240' width='240' height='24' rx='12' fill='%2314213d' opacity='0.14'/%3E%3Crect x='240' y='288' width='360' height='18' rx='9' fill='%2314213d' opacity='0.08'/%3E%3Crect x='240' y='330' width='300' height='18' rx='9' fill='%2314213d' opacity='0.08'/%3E%3Crect x='240' y='396' width='170' height='46' rx='23' fill='%230f7bff'/%3E%3Cpath d='M620 470c44-24 76-70 76-123 0-78-63-141-141-141-68 0-125 49-138 113-55 8-98 56-98 113 0 63 51 114 114 114h187z' fill='%23ef5b34' opacity='0.9'/%3E%3C/svg%3E">
+      </div>
+    </div>
+  </section>
+</body>
+</html>`;
+
+    const EDITABLE_TAGS = new Set([
+      "P",
+      "SPAN",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "DIV",
+      "LI",
+      "TD",
+      "TH",
+      "BLOCKQUOTE",
+      "A",
+      "BUTTON",
+      "LABEL",
+      "CAPTION",
+      "FIGCAPTION",
+      "SMALL",
+      "STRONG",
+      "EM",
+      "B",
+      "I",
+      "U",
+      "MARK"
+    ]);
+
+    const STRUCTURAL_DESCENDANTS = [
+      "ARTICLE",
+      "ASIDE",
+      "BLOCKQUOTE",
+      "DIV",
+      "DL",
+      "FIGURE",
+      "FOOTER",
+      "FORM",
+      "HEADER",
+      "LI",
+      "MAIN",
+      "NAV",
+      "OL",
+      "P",
+      "PRE",
+      "SECTION",
+      "TABLE",
+      "UL"
+    ];
+
+    const EDITOR_STYLE = `
+      <style id="editor-preview-style">
+        :where([data-editor-editable="true"]) {
+          outline: 1px dashed transparent;
+          outline-offset: 2px;
+          border-radius: 0.35rem;
+          transition: outline-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+        }
+
+        :where([data-editor-editable="true"]:hover) {
+          outline-color: rgba(15, 123, 255, 0.35);
+          background-color: rgba(15, 123, 255, 0.04);
+        }
+
+        :where([data-editor-editable="true"]:focus) {
+          outline-style: solid;
+          outline-color: rgba(15, 123, 255, 0.7);
+          box-shadow: 0 0 0 4px rgba(15, 123, 255, 0.14);
+          background-color: transparent;
+        }
+
+        :where(img[data-editor-image="true"]) {
+          cursor: pointer;
+          transition: box-shadow 120ms ease, transform 120ms ease, filter 120ms ease;
+        }
+
+        :where(img[data-editor-image="true"]:hover) {
+          box-shadow: 0 0 0 3px rgba(15, 123, 255, 0.24);
+          filter: saturate(1.05);
+        }
+      </style>
+    `;
+
+    const appState = {
+      lastDoctype: "<!DOCTYPE html>",
+      pendingImageTarget: null,
+      renderTimer: null,
+      previewSyncTimer: null
+    };
+
+    const workspace = document.getElementById("workspace");
+    const sourceInput = document.getElementById("sourceInput");
+    const previewFrame = document.getElementById("previewFrame");
+    const toggleSourceButton = document.getElementById("toggleSourceButton");
+    const exportButton = document.getElementById("exportButton");
+    const imagePicker = document.getElementById("imagePicker");
+    const sanitizationBadge = document.getElementById("sanitizationBadge");
+    const editorStatus = document.getElementById("editorStatus");
+    const previewHint = document.getElementById("previewHint");
+    const sourceStats = document.getElementById("sourceStats");
+
+    function initialize() {
+      if (!sourceInput.value.trim()) {
+        sourceInput.value = STARTER_HTML;
+      }
+
+      updateSourceStats();
+      renderFromSource();
+      bindAppEvents();
+    }
+
+    function bindAppEvents() {
+      sourceInput.addEventListener("input", () => {
+        updateSourceStats();
+        window.clearTimeout(appState.renderTimer);
+        appState.renderTimer = window.setTimeout(renderFromSource, 120);
+      });
+
+      toggleSourceButton.addEventListener("click", () => {
+        setSourceCollapsed(!workspace.classList.contains("is-collapsed"));
+      });
+
+      exportButton.addEventListener("click", exportEditedPage);
+
+      imagePicker.addEventListener("change", handleImageSelection);
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth <= 980) {
+          toggleSourceButton.textContent = workspace.classList.contains("is-collapsed") ? "Show Source" : "Hide Source";
+        }
+      });
+    }
+
+    function setSourceCollapsed(shouldCollapse) {
+      workspace.classList.toggle("is-collapsed", shouldCollapse);
+      toggleSourceButton.setAttribute("aria-expanded", String(!shouldCollapse));
+      toggleSourceButton.textContent = shouldCollapse ? "Show Source" : "Hide Source";
+    }
+
+    function renderFromSource() {
+      const sanitizedDocument = sanitizeHtmlDocument(sourceInput.value);
+      appState.lastDoctype = sanitizedDocument.doctype;
+
+      const previewMarkup = buildPreviewMarkup(sanitizedDocument.document);
+      editorStatus.textContent = "Rendering preview";
+      sanitizationBadge.textContent = buildSanitizationLabel(sanitizedDocument.stats);
+
+      previewFrame.onload = () => {
+        decoratePreviewDocument();
+        editorStatus.textContent = "Preview ready";
+        previewHint.textContent = "Text edits update the source; image clicks open a local picker.";
+      };
+
+      previewFrame.srcdoc = previewMarkup;
+    }
+
+    // Parse the user's HTML into a document and remove executable hooks before previewing it.
+    function sanitizeHtmlDocument(rawHtml) {
+      const parser = new DOMParser();
+      const documentNode = parser.parseFromString(rawHtml || "", "text/html");
+      const stats = {
+        scriptsRemoved: 0,
+        handlersRemoved: 0,
+        dangerousLinksNeutralized: 0,
+        refreshTagsRemoved: 0
+      };
+
+      documentNode.querySelectorAll("script").forEach((script) => {
+        stats.scriptsRemoved += 1;
+        script.remove();
+      });
+
+      documentNode.querySelectorAll('meta[http-equiv="refresh" i]').forEach((meta) => {
+        stats.refreshTagsRemoved += 1;
+        meta.remove();
+      });
+
+      documentNode.querySelectorAll("*").forEach((element) => {
+        Array.from(element.attributes).forEach((attribute) => {
+          const name = attribute.name.toLowerCase();
+          const value = attribute.value.trim();
+
+          if (name.startsWith("on")) {
+            stats.handlersRemoved += 1;
+            element.removeAttribute(attribute.name);
+          }
+
+          if ((name === "href" || name === "xlink:href") && /^javascript:/i.test(value)) {
+            stats.dangerousLinksNeutralized += 1;
+            element.setAttribute(attribute.name, "#");
+          }
+        });
+      });
+
+      ensureDocumentShape(documentNode);
+
+      return {
+        document: documentNode,
+        doctype: serializeDoctype(documentNode),
+        stats
+      };
+    }
+
+    function ensureDocumentShape(documentNode) {
+      if (!documentNode.head) {
+        const head = documentNode.createElement("head");
+        documentNode.documentElement.insertBefore(head, documentNode.body || null);
+      }
+
+      if (!documentNode.body) {
+        const body = documentNode.createElement("body");
+        documentNode.documentElement.appendChild(body);
+      }
+    }
+
+    function serializeDoctype(documentNode) {
+      const doctype = documentNode.doctype;
+
+      if (!doctype) {
+        return "<!DOCTYPE html>";
+      }
+
+      if (doctype.publicId && doctype.systemId) {
+        return `<!DOCTYPE ${doctype.name} PUBLIC "${doctype.publicId}" "${doctype.systemId}">`;
+      }
+
+      if (doctype.publicId) {
+        return `<!DOCTYPE ${doctype.name} PUBLIC "${doctype.publicId}">`;
+      }
+
+      if (doctype.systemId) {
+        return `<!DOCTYPE ${doctype.name} SYSTEM "${doctype.systemId}">`;
+      }
+
+      return `<!DOCTYPE ${doctype.name}>`;
+    }
+
+    function buildPreviewMarkup(documentNode) {
+      const previewDocument = documentNode.cloneNode(true);
+      const editorStyleRange = previewDocument.createRange();
+      const styleFragment = editorStyleRange.createContextualFragment(EDITOR_STYLE);
+      previewDocument.head.appendChild(styleFragment);
+      return `${appState.lastDoctype}\n${previewDocument.documentElement.outerHTML}`;
+    }
+
+    function decoratePreviewDocument() {
+      const previewDocument = previewFrame.contentDocument;
+
+      if (!previewDocument) {
+        return;
+      }
+
+      markEditableNodes(previewDocument.body);
+      markImages(previewDocument.body);
+      bindPreviewEvents(previewDocument);
+    }
+
+    // Only turn suitable text-bearing elements into editing targets to avoid nested editing conflicts.
+    function markEditableNodes(root) {
+      const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+
+      while (walker.nextNode()) {
+        const element = walker.currentNode;
+
+        if (!element || element.nodeType !== 1) {
+          continue;
+        }
+
+        if (isEditableElement(element)) {
+          element.setAttribute("data-editor-editable", "true");
+          element.setAttribute("contenteditable", "true");
+          element.setAttribute("spellcheck", "false");
+        }
+      }
+    }
+
+    function isEditableElement(element) {
+      if (!EDITABLE_TAGS.has(element.tagName)) {
+        return false;
+      }
+
+      if (element.closest("[data-editor-editable='true']")) {
+        return false;
+      }
+
+      const text = element.textContent.replace(/\s+/g, " ").trim();
+      if (!text) {
+        return false;
+      }
+
+      if (element.tagName === "DIV") {
+        return hasMeaningfulDirectText(element) &&
+          !element.querySelector(STRUCTURAL_DESCENDANTS.map((tag) => tag.toLowerCase()).join(","));
+      }
+
+      if (/^H[1-6]$/.test(element.tagName) || element.tagName === "P" || element.tagName === "LI" || element.tagName === "BLOCKQUOTE") {
+        return !element.querySelector("p, h1, h2, h3, h4, h5, h6, li, blockquote");
+      }
+
+      return true;
+    }
+
+    function hasMeaningfulDirectText(element) {
+      return Array.from(element.childNodes).some((child) => {
+        return child.nodeType === Node.TEXT_NODE && child.textContent.trim();
+      });
+    }
+
+    function markImages(root) {
+      root.querySelectorAll("img").forEach((image) => {
+        image.setAttribute("data-editor-image", "true");
+        image.setAttribute("title", "Click to replace this image");
+      });
+    }
+
+    function bindPreviewEvents(previewDocument) {
+      previewDocument.addEventListener("click", handlePreviewClick);
+      previewDocument.addEventListener("input", handlePreviewMutation);
+      previewDocument.addEventListener("blur", handlePreviewMutation, true);
+      previewDocument.addEventListener("keydown", handlePreviewKeydown);
+      previewDocument.addEventListener("submit", (event) => event.preventDefault());
+    }
+
+    function handlePreviewClick(event) {
+      const target = event.target && event.target.nodeType === 1
+        ? event.target
+        : event.target && event.target.parentElement;
+
+      if (!target || typeof target.matches !== "function") {
+        return;
+      }
+
+      if (target.matches("img[data-editor-image='true']")) {
+        event.preventDefault();
+        appState.pendingImageTarget = target;
+        imagePicker.value = "";
+        imagePicker.click();
+        return;
+      }
+
+      const link = target.closest("a");
+      if (link) {
+        event.preventDefault();
+        return;
+      }
+
+      const button = target.closest("button");
+      if (button) {
+        event.preventDefault();
+      }
+    }
+
+    function handlePreviewKeydown(event) {
+      if (event.key === "Tab") {
+        const target = event.target;
+        if (target && target.nodeType === 1 && target.matches("[data-editor-editable='true']")) {
+          event.preventDefault();
+          previewHint.textContent = "Tab is reserved in the editor to keep focus inside the active text block.";
+        }
+      }
+    }
+
+    function handlePreviewMutation() {
+      window.clearTimeout(appState.previewSyncTimer);
+      appState.previewSyncTimer = window.setTimeout(syncSourceFromPreview, 80);
+    }
+
+    function handleImageSelection(event) {
+      const file = event.target.files && event.target.files[0];
+
+      if (!file || !appState.pendingImageTarget) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (!(typeof reader.result === "string")) {
+          return;
+        }
+
+        appState.pendingImageTarget.setAttribute("src", reader.result);
+        appState.pendingImageTarget.removeAttribute("srcset");
+        appState.pendingImageTarget.removeAttribute("sizes");
+        syncSourceFromPreview();
+        editorStatus.textContent = "Image updated";
+        previewHint.textContent = `Embedded ${file.name} as a Base64 data URL.`;
+        appState.pendingImageTarget = null;
+      };
+
+      reader.readAsDataURL(file);
+      imagePicker.value = "";
+    }
+
+    function syncSourceFromPreview() {
+      const previewDocument = previewFrame.contentDocument;
+
+      if (!previewDocument) {
+        return;
+      }
+
+      const cleanHtml = serializeCleanPreviewDocument(previewDocument);
+      sourceInput.value = cleanHtml;
+      updateSourceStats();
+      editorStatus.textContent = "Changes synced";
+    }
+
+    // Export from the live preview DOM so in-place text edits and replaced images are preserved.
+    function serializeCleanPreviewDocument(previewDocument) {
+      const clone = previewDocument.documentElement.cloneNode(true);
+
+      clone.querySelector("#editor-preview-style")?.remove();
+
+      clone.querySelectorAll("[data-editor-editable], [data-editor-image]").forEach((element) => {
+        element.removeAttribute("data-editor-editable");
+        element.removeAttribute("data-editor-image");
+        element.removeAttribute("contenteditable");
+        element.removeAttribute("spellcheck");
+        element.removeAttribute("title");
+      });
+
+      return `${appState.lastDoctype}\n${clone.outerHTML}`;
+    }
+
+    function exportEditedPage() {
+      const previewDocument = previewFrame.contentDocument;
+
+      if (!previewDocument) {
+        return;
+      }
+
+      const finalHtml = serializeCleanPreviewDocument(previewDocument);
+      const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+
+      downloadLink.href = downloadUrl;
+      downloadLink.download = "edited_presentation.html";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      editorStatus.textContent = "Exported edited_presentation.html";
+      previewHint.textContent = "The downloaded file is cleaned of editor-only controls and attributes.";
+    }
+
+    function buildSanitizationLabel(stats) {
+      const parts = [];
+
+      if (stats.scriptsRemoved) {
+        parts.push(`${stats.scriptsRemoved} script${stats.scriptsRemoved === 1 ? "" : "s"} removed`);
+      }
+
+      if (stats.handlersRemoved) {
+        parts.push(`${stats.handlersRemoved} inline handler${stats.handlersRemoved === 1 ? "" : "s"} removed`);
+      }
+
+      if (stats.dangerousLinksNeutralized) {
+        parts.push(`${stats.dangerousLinksNeutralized} javascript link${stats.dangerousLinksNeutralized === 1 ? "" : "s"} neutralized`);
+      }
+
+      if (stats.refreshTagsRemoved) {
+        parts.push(`${stats.refreshTagsRemoved} refresh tag${stats.refreshTagsRemoved === 1 ? "" : "s"} removed`);
+      }
+
+      return parts.length ? parts.join(" | ") : "Safe preview ready";
+    }
+
+    function updateSourceStats() {
+      sourceStats.textContent = `${sourceInput.value.length.toLocaleString()} characters`;
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
