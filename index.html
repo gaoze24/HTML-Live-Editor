@@ -22,10 +22,10 @@
       --accent-soft: rgba(15, 123, 255, 0.12);
       --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
       --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
-      --radius-lg: 24px;
-      --radius-md: 18px;
-      --radius-sm: 12px;
-      --control-height: 2.65rem;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+      --control-height: 2.15rem;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -78,10 +78,10 @@
       mix-blend-mode: soft-light;
     }
 
-    button,
-    textarea,
-    select,
-    input {
+    .app button,
+    .app textarea,
+    .app select,
+    .app input {
       font: inherit;
     }
 
@@ -95,91 +95,82 @@
     }
 
     .topbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 1rem 1.25rem;
-      align-items: start;
-      padding: 1rem 1.25rem 1.1rem;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      padding: 0.5rem 0.75rem;
       background: rgba(10, 16, 27, 0.08);
       backdrop-filter: blur(18px);
       border-bottom: 1px solid var(--border);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
       position: relative;
       z-index: 10;
     }
 
-    .topbar__title-group {
-      min-width: 0;
-    }
-
-    .topbar__eyebrow {
+    .toolbar__label {
       display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.36rem 0.7rem;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.32rem 0.62rem;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--panel);
       color: var(--muted);
-      font-size: 0.75rem;
+      font-size: 0.68rem;
+      font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       box-shadow: var(--shadow-soft);
-    }
-
-    .topbar h1 {
-      margin: 0.72rem 0 0.15rem;
-      font-size: clamp(1.2rem, 1rem + 0.7vw, 1.65rem);
-      line-height: 1.05;
-    }
-
-    .topbar p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.5;
-      max-width: 58rem;
+      white-space: nowrap;
     }
 
     .toolbar {
-      display: grid;
-      gap: 0.75rem;
-      min-width: min(100%, 58rem);
-    }
-
-    .toolbar__row {
       display: flex;
+      align-items: center;
       flex-wrap: wrap;
-      gap: 0.7rem;
-      justify-content: flex-end;
+      gap: 0.45rem;
+      width: 100%;
+      min-width: 0;
     }
 
     .toolbar__group {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.35rem;
       align-items: center;
-      padding: 0.5rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: var(--panel);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .toolbar__status {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.55rem 0.9rem;
-      min-height: var(--control-height);
+      padding: 0.25rem;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--panel);
-      color: var(--muted);
-      font-size: 0.85rem;
-      font-weight: 600;
       box-shadow: var(--shadow-soft);
-      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .toolbar__group[hidden] {
+      display: none;
+    }
+
+    #pageControlsGroup {
+      flex: 1 1 28rem;
+      min-width: min(100%, 18rem);
+      max-width: 42rem;
+    }
+
+    #pageControlsGroup .toolbar-control {
+      width: 100%;
+      min-width: 0;
+    }
+
+    #pageControlsGroup .toolbar-control span {
+      flex: 0 0 auto;
+    }
+
+    #pageControlsGroup select {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
     }
 
     .ghost-button,
@@ -188,9 +179,11 @@
       appearance: none;
       border: 1px solid transparent;
       border-radius: 999px;
-      padding: 0.75rem 1rem;
+      padding: 0.45rem 0.8rem;
       min-height: var(--control-height);
       font-weight: 600;
+      font-size: 0.8rem;
+      line-height: 1;
       cursor: pointer;
       transition:
         transform 160ms ease,
@@ -219,13 +212,13 @@
     .primary-button {
       color: #ffffff;
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-      box-shadow: 0 18px 30px rgba(15, 123, 255, 0.24);
+      box-shadow: 0 10px 22px rgba(15, 123, 255, 0.2);
     }
 
     .primary-button:hover,
     .primary-button:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 22px 34px rgba(15, 123, 255, 0.3);
+      box-shadow: 0 14px 24px rgba(15, 123, 255, 0.24);
     }
 
     .toolbar-toggle[aria-pressed="true"] {
@@ -236,7 +229,8 @@
 
     .toolbar-toggle:disabled,
     .toolbar-control input:disabled,
-    .toolbar-control select:disabled {
+    .toolbar-control select:disabled,
+    .toolbar-control button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
       transform: none;
@@ -255,15 +249,16 @@
     .toolbar-control {
       display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: 0.35rem;
       min-height: var(--control-height);
-      padding: 0.45rem 0.6rem;
+      padding: 0.22rem 0.42rem;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: rgba(8, 15, 26, 0.03);
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.74rem;
       line-height: 1;
+      min-width: 0;
     }
 
     .toolbar-control span {
@@ -274,25 +269,34 @@
     .toolbar-control select,
     .toolbar-control input[type="number"],
     .toolbar-control input[type="color"] {
-      height: 1.95rem;
+      height: 1.6rem;
       border: 1px solid var(--border);
       border-radius: 999px;
       background: var(--panel-strong);
       color: var(--text);
-      padding: 0 0.8rem;
+      padding: 0 0.6rem;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      font-size: 0.76rem;
     }
 
     .toolbar-control input[type="number"] {
-      width: 4.9rem;
+      width: 4.35rem;
     }
 
     .toolbar-control input[type="color"] {
-      width: 2.45rem;
-      min-width: 2.45rem;
-      padding: 0.15rem;
+      width: 2rem;
+      min-width: 2rem;
+      padding: 0.08rem;
       border-radius: 999px;
       cursor: pointer;
+    }
+
+    .toolbar-control select {
+      max-width: 10rem;
+    }
+
+    .toolbar-control--wide select {
+      min-width: 7.4rem;
     }
 
     .workspace {
@@ -300,8 +304,8 @@
       height: 100%;
       display: grid;
       grid-template-columns: minmax(20rem, 34rem) minmax(0, 1fr);
-      gap: 1rem;
-      padding: 1rem;
+      gap: 0.75rem;
+      padding: 0.75rem;
       transition: grid-template-columns 220ms ease;
       overflow: hidden;
     }
@@ -328,37 +332,37 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 1rem;
-      padding: 1.05rem 1.2rem 0.9rem;
+      gap: 0.75rem;
+      padding: 0.72rem 0.9rem 0.66rem;
       border-bottom: 1px solid var(--border);
       background: var(--panel-strong);
       flex-shrink: 0;
     }
 
     .panel__header h2 {
-      margin: 0 0 0.28rem;
-      font-size: 1rem;
+      margin: 0 0 0.16rem;
+      font-size: 0.92rem;
       line-height: 1.2;
     }
 
     .panel__header p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.45;
+      font-size: 0.8rem;
+      line-height: 1.35;
     }
 
     .helper-pill {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
-      padding: 0.42rem 0.7rem;
+      padding: 0.28rem 0.55rem;
       border: 1px solid var(--border);
       border-radius: 999px;
       background: rgba(15, 123, 255, 0.08);
       color: var(--muted);
       white-space: nowrap;
-      font-size: 0.82rem;
+      font-size: 0.72rem;
     }
 
     .source-panel {
@@ -382,9 +386,9 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.9rem;
+      gap: 0.65rem;
       overflow: hidden;
-      padding: 1rem;
+      padding: 0.75rem;
     }
 
     .preview-panel__body {
@@ -397,10 +401,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: 0.55rem;
       flex-wrap: wrap;
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.74rem;
     }
 
     .source-input {
@@ -443,7 +447,7 @@
 
     .status {
       color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 0.76rem;
     }
 
     .sr-only {
@@ -459,16 +463,26 @@
     }
 
     @media (max-width: 1260px) {
-      .topbar {
-        grid-template-columns: 1fr;
-      }
-
-      .toolbar__row {
-        justify-content: flex-start;
+      #pageControlsGroup {
+        flex-basis: 22rem;
+        max-width: 100%;
       }
     }
 
     @media (max-width: 980px) {
+      .topbar {
+        padding: 0.45rem 0.55rem;
+      }
+
+      .toolbar {
+        gap: 0.35rem;
+      }
+
+      #pageControlsGroup {
+        flex-basis: 100%;
+        min-width: 0;
+      }
+
       .workspace {
         grid-template-columns: 1fr;
         grid-template-rows: minmax(16rem, 38dvh) minmax(0, 1fr);
@@ -500,77 +514,127 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="topbar__title-group">
-        <span class="topbar__eyebrow">Single-file visual HTML editor</span>
-        <h1>Presentation Live Editor + Page Builder</h1>
-        <p>Paste existing HTML, edit text in place, replace images, or switch to a lightweight page-builder flow with draggable text and image blocks.</p>
-      </div>
-
       <div class="toolbar" aria-label="Editor toolbar">
-        <div class="toolbar__row">
-          <div class="toolbar__group">
-            <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
-            <button class="ghost-button" id="newPageButton" type="button">New Page</button>
-            <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
-            <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
-            <button class="primary-button" id="exportButton" type="button">Export Page</button>
-          </div>
+        <span class="toolbar__label">Live HTML Editor</span>
 
-          <div class="toolbar__status" id="selectionStatus">No selection</div>
+        <div class="toolbar__group">
+          <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
+          <button class="ghost-button" id="importHtmlButton" type="button">Import HTML</button>
+          <button class="ghost-button" id="newPageButton" type="button">New Page</button>
+          <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
+          <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
+          <button class="primary-button" id="exportButton" type="button">Export HTML</button>
         </div>
 
-        <div class="toolbar__row">
-          <div class="toolbar__group" id="styleControlsGroup">
-            <label class="toolbar-control">
-              <span>Font</span>
-              <select id="fontFamilyControl">
-                <option value="Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif">Aptos</option>
-                <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Trebuchet</option>
-                <option value="Georgia, 'Times New Roman', serif">Georgia</option>
-                <option value="'Courier New', monospace">Courier</option>
-                <option value="inherit">Inherit</option>
-              </select>
-            </label>
+        <div class="toolbar__group" id="pageControlsGroup">
+          <label class="toolbar-control toolbar-control--wide">
+            <span>Page</span>
+            <select id="pageSelect"></select>
+          </label>
+        </div>
 
-            <label class="toolbar-control">
-              <span>Size</span>
-              <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
-            </label>
+        <div class="toolbar__group" id="textControlsGroup">
+          <label class="toolbar-control toolbar-control--wide">
+            <span>Font</span>
+            <select id="fontFamilyControl">
+              <option value="Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif">Aptos</option>
+              <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Trebuchet</option>
+              <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+              <option value="'Courier New', monospace">Courier</option>
+              <option value="inherit">Inherit</option>
+            </select>
+          </label>
 
-            <label class="toolbar-control">
-              <span>Weight</span>
-              <select id="fontWeightControl">
-                <option value="400">400</option>
-                <option value="500">500</option>
-                <option value="600">600</option>
-                <option value="700">700</option>
-                <option value="800">800</option>
-              </select>
-            </label>
+          <label class="toolbar-control">
+            <span>Size</span>
+            <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
+          </label>
 
-            <label class="toolbar-control">
-              <span>Text</span>
-              <input id="textColorControl" type="color" value="#14213d">
-            </label>
+          <label class="toolbar-control">
+            <span>Weight</span>
+            <select id="fontWeightControl">
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600">600</option>
+              <option value="700">700</option>
+              <option value="800">800</option>
+            </select>
+          </label>
 
-            <label class="toolbar-control">
-              <span>Bg</span>
-              <input id="backgroundColorControl" type="color" value="#ffffff">
-            </label>
+          <label class="toolbar-control">
+            <span>Text</span>
+            <input id="textColorControl" type="color" value="#14213d">
+          </label>
 
-            <label class="toolbar-control">
-              <span>Align</span>
-              <select id="textAlignControl">
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-                <option value="justify">Justify</option>
-              </select>
-            </label>
+          <label class="toolbar-control">
+            <span>Bg</span>
+            <input id="backgroundColorControl" type="color" value="#ffffff">
+          </label>
 
-            <button class="toolbar-toggle" id="italicButton" type="button" aria-pressed="false">Italic</button>
-            <button class="toolbar-toggle" id="underlineButton" type="button" aria-pressed="false">Underline</button>
-          </div>
+          <label class="toolbar-control">
+            <span>Align</span>
+            <select id="textAlignControl">
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+              <option value="justify">Justify</option>
+            </select>
+          </label>
+
+          <button class="toolbar-toggle" id="italicButton" type="button" aria-pressed="false">Italic</button>
+          <button class="toolbar-toggle" id="underlineButton" type="button" aria-pressed="false">Underline</button>
+        </div>
+
+        <div class="toolbar__group" id="imageControlsGroup" hidden>
+          <button class="ghost-button" id="replaceImageButton" type="button">Replace</button>
+
+          <label class="toolbar-control">
+            <span>Width</span>
+            <input id="imageWidthControl" type="number" min="1" step="1" value="320">
+          </label>
+
+          <label class="toolbar-control">
+            <span>Height</span>
+            <input id="imageHeightControl" type="number" min="1" step="1" value="220">
+          </label>
+
+          <label class="toolbar-control">
+            <span>Radius</span>
+            <input id="imageRadiusControl" type="number" min="0" step="1" value="20">
+          </label>
+
+          <label class="toolbar-control">
+            <span>Opacity</span>
+            <input id="imageOpacityControl" type="number" min="0" max="100" step="1" value="100">
+          </label>
+
+          <label class="toolbar-control">
+            <span>Rotate</span>
+            <input id="imageRotateControl" type="number" min="-360" max="360" step="1" value="0">
+          </label>
+
+          <label class="toolbar-control">
+            <span>Fit</span>
+            <select id="imageObjectFitControl">
+              <option value="cover">Cover</option>
+              <option value="contain">Contain</option>
+              <option value="fill">Fill</option>
+              <option value="none">None</option>
+              <option value="scale-down">Scale Down</option>
+            </select>
+          </label>
+
+          <label class="toolbar-control">
+            <span>Filter</span>
+            <select id="imageFilterControl">
+              <option value="none">None</option>
+              <option value="soft">Soft</option>
+              <option value="dramatic">Dramatic</option>
+              <option value="grayscale">Grayscale</option>
+              <option value="warm">Warm</option>
+              <option value="cool">Cool</option>
+            </select>
+          </label>
         </div>
       </div>
     </header>
@@ -580,14 +644,14 @@
         <div class="panel__header">
           <div>
             <h2>Source HTML</h2>
-            <p>Paste a complete HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
+            <p>Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
           </div>
           <span class="helper-pill" id="sanitizationBadge">Safe preview ready</span>
         </div>
 
         <div class="source-panel__body">
           <div class="helper-row">
-            <span>Changes render automatically in the editor.</span>
+            <span>Rendered preview stays editable, movable, and exportable.</span>
             <span id="sourceStats">0 characters</span>
           </div>
 
@@ -600,15 +664,15 @@
         <div class="panel__header">
           <div>
             <h2>Live Preview</h2>
-            <p>Edit pasted HTML directly, or use the page-builder tools to place new text and image elements on a blank page canvas.</p>
+            <p>Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.</p>
           </div>
           <span class="helper-pill" id="editorStatus">Ready</span>
         </div>
 
         <div class="preview-panel__body">
           <div class="helper-row">
-            <span>Click text to edit. Drag builder items by their handle. Double-click placed images to replace them.</span>
-            <span class="status" id="previewHint">Text controls apply to the current text selection target.</span>
+            <span>Click to select, drag with the overlay Move handle, and double-click images to replace them.</span>
+            <span class="status" id="previewHint">Text controls appear for text elements. Image controls appear for images.</span>
           </div>
 
           <div class="preview-stage">
@@ -625,6 +689,7 @@
   </div>
 
   <input id="imagePicker" type="file" accept="image/*" hidden>
+  <input id="htmlImportPicker" type="file" accept=".html,.htm,text/html" hidden>
 
   <script>
     const STARTER_HTML = `<!DOCTYPE html>
@@ -752,10 +817,10 @@
       <div>
         <span class="eyebrow">Editable demo</span>
         <h1>Launch your next keynote faster.</h1>
-        <p>Use the source panel for raw HTML changes, then refine the visible copy directly in the preview. Click the image to replace it with a local file instantly.</p>
+        <p>Use the source panel for raw HTML changes, then refine the visible copy directly in the preview. Double-click the image to replace it with a local file instantly.</p>
         <ul>
           <li>Live preview with safe rendering</li>
-          <li>Direct text editing on common presentation elements</li>
+          <li>Unified element selection and movement</li>
           <li>One-click export as a clean standalone HTML file</li>
         </ul>
         <div class="actions">
@@ -771,7 +836,7 @@
 </body>
 </html>`;
 
-    const EDITABLE_TAGS = new Set([
+    const TEXT_EDITABLE_TAGS = new Set([
       "P",
       "SPAN",
       "H1",
@@ -790,13 +855,17 @@
       "LABEL",
       "CAPTION",
       "FIGCAPTION",
-      "SMALL",
+      "SMALL"
+    ]);
+
+    const INLINE_FORMATTING_TAGS = new Set([
       "STRONG",
       "EM",
       "B",
       "I",
       "U",
-      "MARK"
+      "MARK",
+      "SMALL"
     ]);
 
     const STRUCTURAL_DESCENDANTS = [
@@ -820,83 +889,221 @@
       "UL"
     ];
 
+    const NON_SELECTABLE_TAGS = new Set([
+      "HTML",
+      "HEAD",
+      "BODY",
+      "SCRIPT",
+      "STYLE",
+      "META",
+      "LINK",
+      "TITLE",
+      "BR",
+      "HR",
+      "NOSCRIPT",
+      "TEMPLATE"
+    ]);
+
+    const PAGE_HINT_PATTERN = /(?:^|[\s_-])(page|slide|canvas|sheet|artboard|screen)(?:$|[\s_-])/i;
+
+    const IMAGE_FILTER_PRESETS = {
+      none: "none",
+      soft: "saturate(1.05) contrast(1.02)",
+      dramatic: "contrast(1.14) saturate(1.16)",
+      grayscale: "grayscale(1)",
+      warm: "sepia(0.28) saturate(1.06)",
+      cool: "hue-rotate(12deg) saturate(1.08)"
+    };
+
     const EDITOR_STYLE = `
       <style id="editor-preview-style">
-        :where([data-editor-editable="true"]) {
-          outline: 1px dashed transparent;
-          outline-offset: 2px;
-          border-radius: 0.45rem;
-          transition: outline-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+        html[data-editor-preview-root="true"] {
+          min-height: 100%;
         }
 
-        :where([data-editor-editable="true"]:hover) {
-          outline-color: rgba(15, 123, 255, 0.35);
-          background-color: rgba(15, 123, 255, 0.04);
+        html[data-editor-preview-root="true"] body[data-editor-preview="true"] {
+          min-height: 100%;
+          overflow: auto !important;
         }
 
-        :where([data-editor-editable="true"]:focus) {
-          outline-style: solid;
-          outline-color: rgba(15, 123, 255, 0.7);
-          box-shadow: 0 0 0 4px rgba(15, 123, 255, 0.14);
-          background-color: transparent;
+        html[data-editor-preview-root="true"] body[data-editor-preview="true"][data-editor-multipage="true"] {
+          padding: 18px 18px 64px;
+          background:
+            radial-gradient(circle at top left, rgba(15, 123, 255, 0.12), transparent 32%),
+            linear-gradient(180deg, #eef3f8 0%, #e6edf7 100%);
         }
 
-        :where([data-editor-selected="true"]) {
-          outline: 2px solid rgba(15, 123, 255, 0.75);
-          outline-offset: 3px;
+        html[data-editor-preview-root="true"] body[data-editor-preview="true"][data-editor-page="true"] {
+          position: relative;
         }
 
-        :where([data-builder-node][data-editor-selected="true"]) {
-          box-shadow: 0 0 0 4px rgba(15, 123, 255, 0.18);
-          border-radius: 22px;
+        :where([data-editor-page="true"]) {
+          isolation: isolate;
+          scroll-margin-top: 24px;
         }
 
-        :where([data-editor-handle]) {
+        html[data-editor-preview-root="true"] body[data-editor-multipage="true"] :where([data-editor-page="true"]:not(body)) {
+          margin-bottom: 28px;
+        }
+
+        :where([data-editor-page="true"][data-editor-page-kind="explicit"]),
+        :where([data-editor-page="true"][data-editor-page-kind="builder"]) {
+          box-shadow: 0 18px 52px rgba(15, 23, 42, 0.12);
+        }
+
+        :where([data-editor-page="true"][data-editor-page-active="true"]:not(body)) {
+          box-shadow:
+            0 0 0 1px rgba(15, 123, 255, 0.18),
+            0 18px 52px rgba(15, 23, 42, 0.14);
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-multipage="true"] :where([data-editor-page="true"][data-editor-page-label]:not(body))::before {
+          content: attr(data-editor-page-label);
           position: absolute;
           top: -14px;
-          right: 12px;
-          z-index: 5;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 84px;
-          padding: 0.42rem 0.65rem;
+          left: 18px;
+          padding: 0.35rem 0.72rem;
           border-radius: 999px;
-          border: 1px solid rgba(15, 123, 255, 0.3);
           background: rgba(9, 95, 212, 0.94);
           color: #ffffff;
           font: 600 12px/1 "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
           letter-spacing: 0.02em;
-          box-shadow: 0 10px 24px rgba(15, 123, 255, 0.22);
-          opacity: 0;
-          transform: translateY(4px);
+          box-shadow: 0 10px 24px rgba(15, 123, 255, 0.18);
           pointer-events: none;
-          cursor: grab;
-          user-select: none;
-          transition: opacity 120ms ease, transform 120ms ease;
+          z-index: 20;
         }
 
-        :where([data-builder-node]:hover > [data-editor-handle]),
-        :where([data-builder-node][data-editor-selected="true"] > [data-editor-handle]) {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
+        :where([data-editor-selectable="true"]) {
+          transition:
+            box-shadow 120ms ease,
+            filter 120ms ease;
         }
 
-        :where([data-builder-node][data-editor-dragging="true"]),
-        :where([data-builder-node][data-editor-dragging="true"] *) {
-          cursor: grabbing !important;
-          user-select: none !important;
+        :where([data-editor-selectable="true"]:hover) {
+          box-shadow: 0 0 0 1px rgba(15, 123, 255, 0.18);
+        }
+
+        :where([data-editor-text-editable="true"]) {
+          outline: none;
+          min-width: 1px;
+          caret-color: #095fd4;
+        }
+
+        :where([data-editor-text-editable="true"]:focus) {
+          box-shadow: none;
         }
 
         :where(img[data-editor-image="true"]) {
-          cursor: pointer;
-          transition: box-shadow 120ms ease, transform 120ms ease, filter 120ms ease;
+          cursor: default;
         }
 
-        :where(img[data-editor-image="true"]:hover) {
-          box-shadow: 0 0 0 3px rgba(15, 123, 255, 0.22);
-          filter: saturate(1.04);
+        :where([data-builder-node="text"]) {
+          cursor: text;
+        }
+
+        :where([data-builder-node="image"]) {
+          cursor: default;
+        }
+
+        :where([data-editor-overlay-root="true"]) {
+          all: initial;
+          display: block;
+          box-sizing: border-box;
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 2147483647;
+        }
+
+        :where([data-editor-selection-box="true"]) {
+          all: initial;
+          box-sizing: border-box;
+          position: fixed;
+          display: none;
+          border: 2px solid rgba(15, 123, 255, 0.82);
+          border-radius: 14px;
+          box-shadow: 0 0 0 4px rgba(15, 123, 255, 0.16);
+          background: rgba(15, 123, 255, 0.02);
+          pointer-events: none;
+        }
+
+        :where([data-editor-selection-box="true"][data-visible="true"]) {
+          display: block;
+        }
+
+        :where([data-editor-move-handle="true"]) {
+          all: initial;
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          position: absolute;
+          top: -15px;
+          right: 10px;
+          min-width: 84px;
+          padding: 0.44rem 0.72rem;
+          border: 1px solid rgba(15, 123, 255, 0.3);
+          border-radius: 999px;
+          background: rgba(9, 95, 212, 0.96);
+          color: #ffffff;
+          font: 600 12px/1 "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
+          letter-spacing: 0.02em;
+          box-shadow: 0 10px 24px rgba(15, 123, 255, 0.22);
+          cursor: grab;
+          pointer-events: auto;
+          user-select: none;
+        }
+
+        :where([data-editor-move-handle="true"][hidden]) {
+          display: none;
+        }
+
+        :where([data-editor-dragging="true"]) {
+          cursor: grabbing !important;
+        }
+
+        :where([data-editor-slide-baseline="true"]) {
+          font-family: "Aptos Display", "Segoe UI", "Trebuchet MS", sans-serif;
+          color: #14213d;
+        }
+
+        :where([data-editor-slide-baseline="true"]) h1,
+        :where([data-editor-slide-baseline="true"]) h2,
+        :where([data-editor-slide-baseline="true"]) h3,
+        :where([data-editor-slide-baseline="true"]) h4,
+        :where([data-editor-slide-baseline="true"]) h5,
+        :where([data-editor-slide-baseline="true"]) h6 {
+          margin: 0 0 0.45em;
+          line-height: 1.08;
+          letter-spacing: -0.02em;
+          color: inherit;
+        }
+
+        :where([data-editor-slide-baseline="true"]) h1 {
+          font-size: clamp(2.15rem, 4vw, 3.6rem);
+        }
+
+        :where([data-editor-slide-baseline="true"]) h2 {
+          font-size: clamp(1.7rem, 3vw, 2.55rem);
+        }
+
+        :where([data-editor-slide-baseline="true"]) h3 {
+          font-size: clamp(1.35rem, 2.3vw, 2rem);
+        }
+
+        :where([data-editor-slide-baseline="true"]) p,
+        :where([data-editor-slide-baseline="true"]) li,
+        :where([data-editor-slide-baseline="true"]) blockquote,
+        :where([data-editor-slide-baseline="true"]) figcaption,
+        :where([data-editor-slide-baseline="true"]) button,
+        :where([data-editor-slide-baseline="true"]) a {
+          font-size: clamp(1rem, 1.3vw, 1.15rem);
+          line-height: 1.55;
+        }
+
+        :where([data-editor-slide-baseline="true"]) ul,
+        :where([data-editor-slide-baseline="true"]) ol {
+          padding-left: 1.25em;
         }
       </style>
     `;
@@ -905,25 +1112,32 @@
       lastDoctype: "<!DOCTYPE html>",
       renderTimer: null,
       previewSyncTimer: null,
+      overlaySyncFrame: null,
       selectedElement: null,
+      selectedPage: null,
       pendingImageTarget: null,
-      imagePickerMode: null
+      imagePickerMode: null,
+      pageCounter: 0
     };
 
     const workspace = document.getElementById("workspace");
     const sourceInput = document.getElementById("sourceInput");
     const previewFrame = document.getElementById("previewFrame");
     const toggleSourceButton = document.getElementById("toggleSourceButton");
+    const importHtmlButton = document.getElementById("importHtmlButton");
     const newPageButton = document.getElementById("newPageButton");
     const addTextButton = document.getElementById("addTextButton");
     const addImageButton = document.getElementById("addImageButton");
     const exportButton = document.getElementById("exportButton");
     const imagePicker = document.getElementById("imagePicker");
+    const htmlImportPicker = document.getElementById("htmlImportPicker");
     const sanitizationBadge = document.getElementById("sanitizationBadge");
     const editorStatus = document.getElementById("editorStatus");
     const previewHint = document.getElementById("previewHint");
-    const selectionStatus = document.getElementById("selectionStatus");
     const sourceStats = document.getElementById("sourceStats");
+    const pageSelect = document.getElementById("pageSelect");
+    const textControlsGroup = document.getElementById("textControlsGroup");
+    const imageControlsGroup = document.getElementById("imageControlsGroup");
     const fontFamilyControl = document.getElementById("fontFamilyControl");
     const fontSizeControl = document.getElementById("fontSizeControl");
     const fontWeightControl = document.getElementById("fontWeightControl");
@@ -932,7 +1146,16 @@
     const textAlignControl = document.getElementById("textAlignControl");
     const italicButton = document.getElementById("italicButton");
     const underlineButton = document.getElementById("underlineButton");
-    const styleControls = [
+    const replaceImageButton = document.getElementById("replaceImageButton");
+    const imageWidthControl = document.getElementById("imageWidthControl");
+    const imageHeightControl = document.getElementById("imageHeightControl");
+    const imageRadiusControl = document.getElementById("imageRadiusControl");
+    const imageOpacityControl = document.getElementById("imageOpacityControl");
+    const imageRotateControl = document.getElementById("imageRotateControl");
+    const imageObjectFitControl = document.getElementById("imageObjectFitControl");
+    const imageFilterControl = document.getElementById("imageFilterControl");
+
+    const textStyleControls = [
       fontFamilyControl,
       fontSizeControl,
       fontWeightControl,
@@ -943,6 +1166,17 @@
       underlineButton
     ];
 
+    const imageStyleControls = [
+      replaceImageButton,
+      imageWidthControl,
+      imageHeightControl,
+      imageRadiusControl,
+      imageOpacityControl,
+      imageRotateControl,
+      imageObjectFitControl,
+      imageFilterControl
+    ];
+
     function initialize() {
       if (!sourceInput.value.trim()) {
         sourceInput.value = STARTER_HTML;
@@ -951,7 +1185,7 @@
       updateSourceStats();
       bindAppEvents();
       renderFromSource();
-      updateStyleToolbarState();
+      updateToolbarState();
     }
 
     function bindAppEvents() {
@@ -965,12 +1199,22 @@
         setSourceCollapsed(!workspace.classList.contains("is-collapsed"));
       });
 
-      newPageButton.addEventListener("click", createNewPage);
+      importHtmlButton.addEventListener("click", () => {
+        htmlImportPicker.value = "";
+        htmlImportPicker.click();
+      });
 
+      htmlImportPicker.addEventListener("change", handleHtmlImport);
+
+      newPageButton.addEventListener("click", createNewPage);
       addTextButton.addEventListener("click", addTextBoxToCurrentPage);
 
       addImageButton.addEventListener("click", () => {
         const previewDocument = previewFrame.contentDocument;
+        if (!previewDocument) {
+          return;
+        }
+
         ensureCurrentPage(previewDocument, true);
         appState.imagePickerMode = "add-image";
         appState.pendingImageTarget = null;
@@ -980,6 +1224,24 @@
 
       exportButton.addEventListener("click", exportEditedPage);
       imagePicker.addEventListener("change", handleImageSelection);
+
+      pageSelect.addEventListener("change", () => {
+        const previewDocument = previewFrame.contentDocument;
+        if (!previewDocument) {
+          return;
+        }
+
+        const page = getPageElements(previewDocument).find((candidate) => {
+          return candidate.getAttribute("data-editor-page-id") === pageSelect.value;
+        });
+        if (!page) {
+          return;
+        }
+
+        clearSelection(false);
+        setCurrentPage(page, { scroll: true });
+        updateToolbarState();
+      });
 
       fontFamilyControl.addEventListener("change", () => {
         applyInlineStyleToSelection("fontFamily", fontFamilyControl.value);
@@ -1010,8 +1272,47 @@
         toggleTextStyle("fontStyle", "italic", italicButton);
       });
 
-      underlineButton.addEventListener("click", () => {
-        toggleTextDecoration();
+      underlineButton.addEventListener("click", toggleTextDecoration);
+
+      replaceImageButton.addEventListener("click", replaceSelectedImage);
+
+      imageWidthControl.addEventListener("input", () => {
+        applyImageDimension("width", imageWidthControl.value);
+      });
+
+      imageHeightControl.addEventListener("input", () => {
+        applyImageDimension("height", imageHeightControl.value);
+      });
+
+      imageRadiusControl.addEventListener("input", () => {
+        applyImageStyle("borderRadius", `${Math.max(0, Number(imageRadiusControl.value) || 0)}px`);
+      });
+
+      imageOpacityControl.addEventListener("input", () => {
+        const opacity = Math.min(100, Math.max(0, Number(imageOpacityControl.value) || 0));
+        applyImageStyle("opacity", String(opacity / 100));
+      });
+
+      imageRotateControl.addEventListener("input", () => {
+        const image = getSelectedImageTarget();
+        if (!image) {
+          return;
+        }
+
+        ensureTransformState(image);
+        image.setAttribute("data-editor-rotate", String(Number(imageRotateControl.value) || 0));
+        applyManagedTransform(image);
+        syncSourceFromPreview();
+        scheduleOverlayRefresh();
+      });
+
+      imageObjectFitControl.addEventListener("change", () => {
+        applyImageStyle("objectFit", imageObjectFitControl.value);
+      });
+
+      imageFilterControl.addEventListener("change", () => {
+        const preset = IMAGE_FILTER_PRESETS[imageFilterControl.value] || "none";
+        applyImageStyle("filter", preset);
       });
     }
 
@@ -1021,8 +1322,36 @@
       toggleSourceButton.textContent = shouldCollapse ? "Show Source" : "Hide Source";
     }
 
+    function handleHtmlImport(event) {
+      const file = event.target.files && event.target.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== "string") {
+          return;
+        }
+
+        clearSelection(false);
+        appState.selectedPage = null;
+        sourceInput.value = reader.result;
+        updateSourceStats();
+        renderFromSource();
+        editorStatus.textContent = `Imported ${file.name}`;
+        previewHint.textContent = "Imported HTML is now the preview source. The same sanitizer used for pasted HTML is applied before rendering.";
+      };
+
+      reader.readAsText(file);
+      htmlImportPicker.value = "";
+    }
+
     function renderFromSource() {
       clearSelection(false);
+      appState.selectedPage = null;
+
       const sanitizedDocument = sanitizeHtmlDocument(sourceInput.value);
       appState.lastDoctype = sanitizedDocument.doctype;
 
@@ -1033,7 +1362,7 @@
       previewFrame.onload = () => {
         decoratePreviewDocument();
         editorStatus.textContent = "Preview ready";
-        previewHint.textContent = "Use the toolbar to add builder items, or edit existing content directly in the preview.";
+        previewHint.textContent = "Click any element to select it. Use the Move handle on the selection outline for drag positioning.";
       };
 
       previewFrame.srcdoc = previewMarkup;
@@ -1134,41 +1463,202 @@
         return;
       }
 
-      markEditableNodes(previewDocument.body);
-      decorateBuilderNodes(previewDocument.body);
-      markImages(previewDocument.body);
+      previewDocument.documentElement.setAttribute("data-editor-preview-root", "true");
+      previewDocument.body.setAttribute("data-editor-preview", "true");
+      initializePageModel(previewDocument);
+      markInteractiveNodes(previewDocument);
+      ensureEditorOverlay(previewDocument);
       bindPreviewEvents(previewDocument);
-      updateStyleToolbarState();
+      const initialPage = ensureCurrentPage(previewDocument, true);
+      setCurrentPage(initialPage, { scroll: false });
+      updatePagePicker(previewDocument);
+      updateToolbarState();
+      refreshSelectionOverlay();
     }
 
-    function markEditableNodes(root) {
-      const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    function initializePageModel(previewDocument) {
+      const body = previewDocument.body;
+      const pages = findPageRoots(previewDocument);
 
-      while (walker.nextNode()) {
-        const element = walker.currentNode;
+      body.removeAttribute("data-editor-multipage");
+      body.removeAttribute("data-editor-page");
+      body.removeAttribute("data-editor-page-kind");
+      body.removeAttribute("data-editor-page-label");
+      body.removeAttribute("data-editor-page-id");
+      body.removeAttribute("data-editor-page-active");
 
-        if (!element || element.nodeType !== 1) {
-          continue;
+      previewDocument.querySelectorAll("[data-editor-page='true']").forEach((page) => {
+        if (page !== body) {
+          page.removeAttribute("data-editor-page");
+          page.removeAttribute("data-editor-page-kind");
+          page.removeAttribute("data-editor-page-label");
+          page.removeAttribute("data-editor-page-active");
+        }
+      });
+
+      if (!pages.length) {
+        markPage(body, 0, "implicit");
+        applySlideTypographyBaseline(previewDocument, [body], false);
+        return;
+      }
+
+      if (pages.length > 1) {
+        body.setAttribute("data-editor-multipage", "true");
+      }
+
+      pages.forEach((page, index) => {
+        const kind = page.hasAttribute("data-builder-page") ? "builder" : "explicit";
+        markPage(page, index, kind);
+      });
+
+      applySlideTypographyBaseline(previewDocument, pages, shouldApplySlideTypographyBaseline(previewDocument, pages));
+    }
+
+    function shouldApplySlideTypographyBaseline(previewDocument, pages) {
+      if (pages.length < 2) {
+        return false;
+      }
+
+      if (previewDocument.querySelector("style, link[rel='stylesheet']")) {
+        return false;
+      }
+
+      return !previewDocument.querySelector(
+        "[style*='font-size'], [style*='font-family'], [style*='font-weight'], [style*='line-height'], [style*='letter-spacing']"
+      );
+    }
+
+    function applySlideTypographyBaseline(previewDocument, pages, shouldApply) {
+      previewDocument.querySelectorAll("[data-editor-slide-baseline='true']").forEach((page) => {
+        page.removeAttribute("data-editor-slide-baseline");
+      });
+
+      if (!shouldApply) {
+        return;
+      }
+
+      pages.forEach((page) => {
+        page.setAttribute("data-editor-slide-baseline", "true");
+      });
+    }
+
+    function findPageRoots(previewDocument) {
+      const children = Array.from(previewDocument.body.children).filter((child) => {
+        return !child.matches("[data-editor-overlay-root='true'], script, style");
+      });
+
+      if (!children.length) {
+        return [];
+      }
+
+      const explicit = children.filter((child) => {
+        const hints = [
+          child.id,
+          child.className,
+          child.getAttribute("data-page"),
+          child.getAttribute("data-slide"),
+          child.getAttribute("aria-label")
+        ].filter(Boolean).join(" ");
+
+        return child.hasAttribute("data-builder-page") || PAGE_HINT_PATTERN.test(hints);
+      });
+
+      if (explicit.length >= 2) {
+        return explicit;
+      }
+
+      if (explicit.length === 1 && children.length === 1) {
+        return explicit;
+      }
+
+      if (!explicit.length && children.length >= 2 && children.every(isStructuralPageSized)) {
+        return children;
+      }
+
+      return explicit;
+    }
+
+    function isStructuralPageSized(element) {
+      if (!["SECTION", "ARTICLE", "DIV", "MAIN"].includes(element.tagName)) {
+        return false;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const breakAfter = `${computed.breakAfter || ""} ${computed.pageBreakAfter || ""}`;
+
+      return rect.height >= 480 || /page|always/i.test(breakAfter);
+    }
+
+    function markPage(page, index, kind) {
+      page.setAttribute("data-editor-page", "true");
+      page.setAttribute("data-editor-page-kind", kind);
+      page.setAttribute("data-editor-page-label", `Page ${index + 1}`);
+
+      if (!page.getAttribute("data-editor-page-id")) {
+        appState.pageCounter += 1;
+        page.setAttribute("data-editor-page-id", `page-${appState.pageCounter}`);
+      }
+
+      if (page !== page.ownerDocument.body) {
+        const computed = previewFrame.contentWindow.getComputedStyle(page);
+        if (computed.position === "static") {
+          page.style.position = "relative";
+        }
+      }
+    }
+
+    function markInteractiveNodes(previewDocument) {
+      const nodes = [previewDocument.body, ...previewDocument.body.querySelectorAll("*")];
+
+      nodes.forEach((element) => {
+        if (element.matches("[data-editor-overlay-root='true'], [data-editor-overlay-root='true'] *")) {
+          return;
         }
 
-        if (isEditableElement(element)) {
-          element.setAttribute("data-editor-editable", "true");
+        element.removeAttribute("data-editor-selectable");
+        element.removeAttribute("data-editor-text-editable");
+        element.removeAttribute("data-editor-image");
+
+        if (element !== previewDocument.body) {
+          element.removeAttribute("contenteditable");
+          element.removeAttribute("spellcheck");
+        }
+
+        if (element.tagName === "IMG") {
+          element.setAttribute("data-editor-selectable", "true");
+          element.setAttribute("data-editor-image", "true");
+          return;
+        }
+
+        if (element !== previewDocument.body && isTextEditableElement(element)) {
+          element.setAttribute("data-editor-selectable", "true");
+          element.setAttribute("data-editor-text-editable", "true");
           element.setAttribute("contenteditable", "true");
           element.setAttribute("spellcheck", "false");
+          return;
         }
-      }
+
+        if (element !== previewDocument.body && isSelectableElement(element)) {
+          element.setAttribute("data-editor-selectable", "true");
+        }
+      });
     }
 
-    function isEditableElement(element) {
-      if (element.matches("[data-editor-skip='true']")) {
+    function isTextEditableElement(element) {
+      if (!TEXT_EDITABLE_TAGS.has(element.tagName)) {
         return false;
       }
 
-      if (!EDITABLE_TAGS.has(element.tagName)) {
+      if (element.matches("[data-editor-page='true']")) {
         return false;
       }
 
-      if (element.closest("[data-editor-editable='true']")) {
+      if (element.closest("[data-editor-text-editable='true']")) {
+        return false;
+      }
+
+      if (INLINE_FORMATTING_TAGS.has(element.tagName) && element.parentElement?.matches("[data-editor-text-editable='true']")) {
         return false;
       }
 
@@ -1195,34 +1685,45 @@
       });
     }
 
-    function decorateBuilderNodes(root) {
-      root.querySelectorAll("[data-builder-node]").forEach((node) => {
-        ensureBuilderHandle(node);
+    function isSelectableElement(element) {
+      if (NON_SELECTABLE_TAGS.has(element.tagName)) {
+        return false;
+      }
+
+      if (element.matches("[data-editor-page='true']")) {
+        return true;
+      }
+
+      if (INLINE_FORMATTING_TAGS.has(element.tagName) && element.closest("[data-editor-text-editable='true']")) {
+        return false;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(element);
+      if (computed.display === "none" || computed.visibility === "hidden") {
+        return false;
+      }
+
+      const meaningfulText = element.textContent.replace(/\s+/g, " ").trim();
+      const hasRenderableChild = Array.from(element.children).some((child) => {
+        return !NON_SELECTABLE_TAGS.has(child.tagName) && child.getBoundingClientRect().width + child.getBoundingClientRect().height > 0;
       });
+
+      return Boolean(meaningfulText || hasRenderableChild);
     }
 
-    function ensureBuilderHandle(node) {
-      if (node.querySelector(":scope > [data-editor-handle]")) {
+    function ensureEditorOverlay(previewDocument) {
+      if (previewDocument.querySelector("[data-editor-overlay-root='true']")) {
         return;
       }
 
-      const handle = node.ownerDocument.createElement("div");
-      handle.setAttribute("data-editor-handle", "true");
-      handle.setAttribute("data-editor-skip", "true");
-      handle.textContent = "Move";
-      node.prepend(handle);
-    }
-
-    function markImages(root) {
-      root.querySelectorAll("img").forEach((image) => {
-        image.setAttribute("data-editor-image", "true");
-
-        if (image.closest("[data-builder-node='image']")) {
-          image.setAttribute("title", "Double-click to replace this image");
-        } else {
-          image.setAttribute("title", "Click to replace this image");
-        }
-      });
+      const root = previewDocument.createElement("div");
+      root.setAttribute("data-editor-overlay-root", "true");
+      root.innerHTML = `
+        <div data-editor-selection-box="true">
+          <button type="button" data-editor-move-handle="true">Move</button>
+        </div>
+      `;
+      previewDocument.body.appendChild(root);
     }
 
     function bindPreviewEvents(previewDocument) {
@@ -1233,12 +1734,19 @@
       previewDocument.addEventListener("blur", handlePreviewMutation, true);
       previewDocument.addEventListener("keydown", handlePreviewKeydown);
       previewDocument.addEventListener("submit", (event) => event.preventDefault());
+      previewDocument.addEventListener("scroll", scheduleOverlayRefresh, true);
+      previewFrame.contentWindow.addEventListener("resize", scheduleOverlayRefresh);
     }
 
     function handlePreviewClick(event) {
       const target = getEventTargetElement(event);
+      const previewDocument = previewFrame.contentDocument;
 
-      if (!target) {
+      if (!target || !previewDocument) {
+        return;
+      }
+
+      if (target.closest("[data-editor-overlay-root='true']")) {
         return;
       }
 
@@ -1252,32 +1760,26 @@
         event.preventDefault();
       }
 
-      if (target.closest("[data-editor-handle='true']")) {
+      const selectable = target.closest("[data-editor-selectable='true']");
+      const page = getElementPage(target);
+
+      if (page) {
+        setCurrentPage(page, { scroll: false });
+      }
+
+      if (selectable) {
+        selectElement(selectable);
         return;
       }
 
-      const builderNode = target.closest("[data-builder-node]");
-      if (builderNode) {
-        selectElement(builderNode);
-        return;
+      clearSelection(false);
+
+      if (page) {
+        setCurrentPage(page, { scroll: false });
       }
 
-      if (target.matches("img[data-editor-image='true']")) {
-        selectElement(target);
-        appState.imagePickerMode = "replace-image";
-        appState.pendingImageTarget = target;
-        imagePicker.value = "";
-        imagePicker.click();
-        return;
-      }
-
-      const editable = target.closest("[data-editor-editable='true']");
-      if (editable) {
-        selectElement(editable);
-        return;
-      }
-
-      clearSelection();
+      updateToolbarState();
+      scheduleOverlayRefresh();
     }
 
     function handlePreviewDoubleClick(event) {
@@ -1287,21 +1789,14 @@
         return;
       }
 
-      const builderImageNode = target.closest("[data-builder-node='image']");
-      if (!builderImageNode) {
-        return;
-      }
-
-      const image = builderImageNode.querySelector("img");
+      const image = target.closest("img[data-editor-image='true']");
       if (!image) {
         return;
       }
 
-      selectElement(builderImageNode);
-      appState.imagePickerMode = "replace-image";
-      appState.pendingImageTarget = image;
-      imagePicker.value = "";
-      imagePicker.click();
+      event.preventDefault();
+      selectElement(image);
+      replaceSelectedImage();
     }
 
     function handlePreviewPointerDown(event) {
@@ -1311,17 +1806,30 @@
         return;
       }
 
-      const handle = target.closest("[data-editor-handle='true']");
-      if (!handle) {
+      const handle = target.closest("[data-editor-move-handle='true']");
+      if (!handle || !appState.selectedElement) {
         return;
       }
 
-      const node = handle.closest("[data-builder-node]");
-      if (!node) {
-        return;
-      }
+      startElementDrag(appState.selectedElement, event);
+    }
 
-      startNodeDrag(node, event);
+    function handlePreviewKeydown(event) {
+      if (event.key === "Tab") {
+        const target = event.target;
+        if (target && target.nodeType === 1 && target.matches("[data-editor-text-editable='true']")) {
+          event.preventDefault();
+          previewHint.textContent = "Tab stays inside the current text element so typing remains predictable.";
+        }
+      }
+    }
+
+    function handlePreviewMutation() {
+      window.clearTimeout(appState.previewSyncTimer);
+      appState.previewSyncTimer = window.setTimeout(syncSourceFromPreview, 90);
+      updatePagePicker(previewFrame.contentDocument);
+      updateToolbarState();
+      scheduleOverlayRefresh();
     }
 
     function getEventTargetElement(event) {
@@ -1332,41 +1840,239 @@
       return event.target && event.target.parentElement ? event.target.parentElement : null;
     }
 
-    function startNodeDrag(node, pointerEvent) {
+    function clearSelection(syncToolbar = true) {
+      if (appState.selectedElement && typeof appState.selectedElement.removeAttribute === "function") {
+        appState.selectedElement.removeAttribute("data-editor-selected");
+      }
+
+      appState.selectedElement = null;
+
+      if (syncToolbar) {
+        updateToolbarState();
+      }
+
+      scheduleOverlayRefresh();
+    }
+
+    function selectElement(element) {
+      if (!element) {
+        clearSelection();
+        return;
+      }
+
+      if (appState.selectedElement === element) {
+        setCurrentPage(getElementPage(element), { scroll: false });
+        updateToolbarState();
+        scheduleOverlayRefresh();
+        return;
+      }
+
+      if (appState.selectedElement) {
+        appState.selectedElement.removeAttribute("data-editor-selected");
+      }
+
+      appState.selectedElement = element;
+      appState.selectedElement.setAttribute("data-editor-selected", "true");
+      setCurrentPage(getElementPage(element), { scroll: false });
+      updateToolbarState();
+      scheduleOverlayRefresh();
+    }
+
+    function setCurrentPage(page, options = {}) {
       const previewDocument = previewFrame.contentDocument;
-      const page = node.closest("[data-builder-page='true']");
 
       if (!previewDocument || !page) {
         return;
       }
 
+      const allPages = getPageElements(previewDocument);
+      allPages.forEach((candidate) => candidate.removeAttribute("data-editor-page-active"));
+
+      appState.selectedPage = page;
+      page.setAttribute("data-editor-page-active", "true");
+
+      updatePagePicker(previewDocument);
+
+      if (options.scroll) {
+        page.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function getPageElements(previewDocument) {
+      return Array.from(previewDocument.querySelectorAll("[data-editor-page='true']"));
+    }
+
+    function getElementPage(element) {
+      if (!element || !element.ownerDocument) {
+        return null;
+      }
+
+      return element.closest("[data-editor-page='true']") ||
+        (element.ownerDocument.body.hasAttribute("data-editor-page") ? element.ownerDocument.body : null);
+    }
+
+    function ensureCurrentPage(previewDocument, createIfMissing) {
+      if (!previewDocument) {
+        return null;
+      }
+
+      if (appState.selectedElement) {
+        const selectedPage = getElementPage(appState.selectedElement);
+        if (selectedPage) {
+          return selectedPage;
+        }
+      }
+
+      if (appState.selectedPage && appState.selectedPage.ownerDocument === previewDocument && previewDocument.contains(appState.selectedPage)) {
+        return appState.selectedPage;
+      }
+
+      const pages = getPageElements(previewDocument);
+      if (pages.length) {
+        return pages[0];
+      }
+
+      if (!createIfMissing) {
+        return null;
+      }
+
+      initializePageModel(previewDocument);
+      return previewDocument.body;
+    }
+
+    function updatePagePicker(previewDocument) {
+      if (!previewDocument) {
+        return;
+      }
+
+      const pages = getPageElements(previewDocument);
+      const activeId = appState.selectedPage?.getAttribute("data-editor-page-id") || pages[0]?.getAttribute("data-editor-page-id") || "";
+
+      pageSelect.innerHTML = "";
+
+      pages.forEach((page, index) => {
+        const option = document.createElement("option");
+        const pageId = page.getAttribute("data-editor-page-id");
+        option.value = pageId;
+        option.textContent = buildPageOptionLabel(page, index);
+        pageSelect.appendChild(option);
+      });
+
+      pageSelect.disabled = pages.length <= 1;
+
+      if (activeId) {
+        pageSelect.value = activeId;
+      }
+    }
+
+    function buildPageOptionLabel(page, index) {
+      const heading = page.querySelector("h1, h2, h3");
+      const headingText = heading ? heading.textContent.replace(/\s+/g, " ").trim().slice(0, 28) : "";
+      return headingText ? `Page ${index + 1}: ${headingText}` : `Page ${index + 1}`;
+    }
+
+    function scheduleOverlayRefresh() {
+      if (appState.overlaySyncFrame) {
+        return;
+      }
+
+      appState.overlaySyncFrame = window.requestAnimationFrame(() => {
+        appState.overlaySyncFrame = null;
+        refreshSelectionOverlay();
+      });
+    }
+
+    function refreshSelectionOverlay() {
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return;
+      }
+
+      const selectionBox = previewDocument.querySelector("[data-editor-selection-box='true']");
+      const moveHandle = previewDocument.querySelector("[data-editor-move-handle='true']");
+
+      if (!selectionBox || !moveHandle) {
+        return;
+      }
+
+      if (!appState.selectedElement || !previewDocument.contains(appState.selectedElement)) {
+        selectionBox.removeAttribute("data-visible");
+        selectionBox.style.left = "";
+        selectionBox.style.top = "";
+        selectionBox.style.width = "";
+        selectionBox.style.height = "";
+        return;
+      }
+
+      const rect = appState.selectedElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        selectionBox.removeAttribute("data-visible");
+        return;
+      }
+
+      const padding = 4;
+      selectionBox.setAttribute("data-visible", "true");
+      selectionBox.style.left = `${Math.round(rect.left - padding)}px`;
+      selectionBox.style.top = `${Math.round(rect.top - padding)}px`;
+      selectionBox.style.width = `${Math.round(rect.width + padding * 2)}px`;
+      selectionBox.style.height = `${Math.round(rect.height + padding * 2)}px`;
+      moveHandle.hidden = !canDragElement(appState.selectedElement);
+    }
+
+    function canDragElement(element) {
+      if (!element || !element.ownerDocument) {
+        return false;
+      }
+
+      return element !== element.ownerDocument.body;
+    }
+
+    function startElementDrag(element, pointerEvent) {
+      if (!canDragElement(element)) {
+        return;
+      }
+
+      const previewDocument = previewFrame.contentDocument;
+      const boundary = getDragBoundary(element);
+
+      if (!previewDocument || !boundary) {
+        return;
+      }
+
       pointerEvent.preventDefault();
-      selectElement(node);
+      ensureTransformState(element);
 
-      const nodeRect = node.getBoundingClientRect();
-      const pageRect = page.getBoundingClientRect();
-      const shiftX = pointerEvent.clientX - nodeRect.left;
-      const shiftY = pointerEvent.clientY - nodeRect.top;
+      const startX = pointerEvent.clientX;
+      const startY = pointerEvent.clientY;
+      const startTranslateX = getTransformValue(element, "data-editor-translate-x");
+      const startTranslateY = getTransformValue(element, "data-editor-translate-y");
+      const startRect = element.getBoundingClientRect();
+      const boundaryRect = boundary.getBoundingClientRect();
+      const padding = 8;
 
-      node.setAttribute("data-editor-dragging", "true");
+      element.setAttribute("data-editor-dragging", "true");
       previewDocument.body.style.userSelect = "none";
 
       const onMove = (moveEvent) => {
-        let left = moveEvent.clientX - pageRect.left - shiftX;
-        let top = moveEvent.clientY - pageRect.top - shiftY;
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
 
-        const maxLeft = Math.max(0, page.clientWidth - nodeRect.width);
-        const maxTop = Math.max(0, page.clientHeight - nodeRect.height);
+        const minX = startTranslateX + (boundaryRect.left + padding - startRect.left);
+        const maxX = startTranslateX + (boundaryRect.right - padding - startRect.right);
+        const minY = startTranslateY + (boundaryRect.top + padding - startRect.top);
+        const maxY = startTranslateY + (boundaryRect.bottom - padding - startRect.bottom);
 
-        left = Math.min(Math.max(0, left), maxLeft);
-        top = Math.min(Math.max(0, top), maxTop);
+        const nextX = clamp(startTranslateX + deltaX, minX, maxX);
+        const nextY = clamp(startTranslateY + deltaY, minY, maxY);
 
-        node.style.left = `${Math.round(left)}px`;
-        node.style.top = `${Math.round(top)}px`;
+        element.setAttribute("data-editor-translate-x", String(Math.round(nextX)));
+        element.setAttribute("data-editor-translate-y", String(Math.round(nextY)));
+        applyManagedTransform(element);
+        scheduleOverlayRefresh();
       };
 
       const onUp = () => {
-        node.removeAttribute("data-editor-dragging");
+        element.removeAttribute("data-editor-dragging");
         previewDocument.body.style.userSelect = "";
         previewDocument.removeEventListener("pointermove", onMove);
         previewDocument.removeEventListener("pointerup", onUp);
@@ -1379,112 +2085,116 @@
       previewDocument.addEventListener("pointercancel", onUp);
     }
 
-    function handlePreviewKeydown(event) {
-      if (event.key === "Tab") {
-        const target = event.target;
-        if (target && target.nodeType === 1 && target.matches("[data-editor-editable='true']")) {
-          event.preventDefault();
-          previewHint.textContent = "Tab is reserved inside the active text block so typing remains predictable.";
-        }
+    function getDragBoundary(element) {
+      if (element.matches("[data-editor-page='true']")) {
+        return element.ownerDocument.body;
+      }
+
+      return getElementPage(element) || element.ownerDocument.body;
+    }
+
+    function clamp(value, min, max) {
+      if (min > max) {
+        return value;
+      }
+
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function ensureTransformState(element) {
+      if (!element.hasAttribute("data-editor-base-transform")) {
+        const computedTransform = previewFrame.contentWindow.getComputedStyle(element).transform;
+        element.setAttribute("data-editor-base-transform", computedTransform && computedTransform !== "none" ? computedTransform : "");
+      }
+
+      if (!element.hasAttribute("data-editor-translate-x")) {
+        element.setAttribute("data-editor-translate-x", "0");
+      }
+
+      if (!element.hasAttribute("data-editor-translate-y")) {
+        element.setAttribute("data-editor-translate-y", "0");
+      }
+
+      if (!element.hasAttribute("data-editor-rotate")) {
+        element.setAttribute("data-editor-rotate", "0");
       }
     }
 
-    function handlePreviewMutation() {
-      window.clearTimeout(appState.previewSyncTimer);
-      appState.previewSyncTimer = window.setTimeout(syncSourceFromPreview, 80);
+    function getTransformValue(element, attributeName) {
+      return Number.parseFloat(element.getAttribute(attributeName) || "0") || 0;
     }
 
-    function clearSelection(syncToolbar = true) {
-      if (appState.selectedElement && typeof appState.selectedElement.removeAttribute === "function") {
-        appState.selectedElement.removeAttribute("data-editor-selected");
+    function applyManagedTransform(element) {
+      const baseTransform = element.getAttribute("data-editor-base-transform") || "";
+      const translateX = getTransformValue(element, "data-editor-translate-x");
+      const translateY = getTransformValue(element, "data-editor-translate-y");
+      const rotate = getTransformValue(element, "data-editor-rotate");
+      const parts = [];
+
+      if (baseTransform) {
+        parts.push(baseTransform);
       }
 
-      appState.selectedElement = null;
-
-      if (syncToolbar) {
-        updateStyleToolbarState();
-      }
-    }
-
-    function selectElement(element) {
-      if (!element) {
-        clearSelection();
-        return;
+      if (translateX || translateY) {
+        parts.push(`translate(${translateX}px, ${translateY}px)`);
       }
 
-      if (appState.selectedElement === element) {
-        updateStyleToolbarState();
-        return;
+      if (rotate) {
+        parts.push(`rotate(${rotate}deg)`);
       }
 
-      if (appState.selectedElement) {
-        appState.selectedElement.removeAttribute("data-editor-selected");
-      }
-
-      appState.selectedElement = element;
-      appState.selectedElement.setAttribute("data-editor-selected", "true");
-      updateStyleToolbarState();
+      element.style.transform = parts.join(" ").trim();
     }
 
     function getSelectedTextTarget() {
       const selectedElement = appState.selectedElement;
-
-      if (!selectedElement) {
-        return null;
-      }
-
-      if (selectedElement.matches("[data-builder-node='text']")) {
-        return selectedElement.querySelector("[data-builder-content='true']");
-      }
-
-      if (selectedElement.matches("[data-editor-editable='true']")) {
-        return selectedElement;
-      }
-
-      return null;
+      return selectedElement && selectedElement.matches("[data-editor-text-editable='true']") ? selectedElement : null;
     }
 
-    function updateStyleToolbarState() {
-      const target = getSelectedTextTarget();
+    function getSelectedImageTarget() {
+      const selectedElement = appState.selectedElement;
+      return selectedElement && selectedElement.matches("img[data-editor-image='true']") ? selectedElement : null;
+    }
 
-      styleControls.forEach((control) => {
-        control.disabled = !target;
+    function updateToolbarState() {
+      const textTarget = getSelectedTextTarget();
+      const imageTarget = getSelectedImageTarget();
+
+      textControlsGroup.hidden = !textTarget;
+      imageControlsGroup.hidden = !imageTarget;
+
+      textStyleControls.forEach((control) => {
+        control.disabled = !textTarget;
       });
 
-      if (!target) {
+      imageStyleControls.forEach((control) => {
+        control.disabled = !imageTarget;
+      });
+
+      if (textTarget) {
+        const computed = previewFrame.contentWindow.getComputedStyle(textTarget);
+        fontFamilyControl.value = matchFontFamilyOption(computed.fontFamily);
+        fontSizeControl.value = parseInt(computed.fontSize, 10) || 28;
+        fontWeightControl.value = normalizeWeightOption(computed.fontWeight);
+        textColorControl.value = toHexColor(computed.color, "#14213d");
+        backgroundColorControl.value = toHexColor(computed.backgroundColor, "#ffffff");
+        textAlignControl.value = computed.textAlign || "left";
+        italicButton.setAttribute("aria-pressed", String(computed.fontStyle === "italic"));
+        underlineButton.setAttribute("aria-pressed", String((computed.textDecorationLine || "").includes("underline")));
+      } else {
         italicButton.setAttribute("aria-pressed", "false");
         underlineButton.setAttribute("aria-pressed", "false");
-
-        if (!appState.selectedElement) {
-          selectionStatus.textContent = "No selection";
-          return;
-        }
-
-        if (appState.selectedElement.matches("[data-builder-node='image']") || appState.selectedElement.matches("img")) {
-          selectionStatus.textContent = "Selected: image";
-          return;
-        }
-
-        selectionStatus.textContent = `Selected: ${appState.selectedElement.tagName.toLowerCase()}`;
-        return;
       }
 
-      const previewWindow = previewFrame.contentWindow;
-      const computed = previewWindow.getComputedStyle(target);
-
-      fontFamilyControl.value = matchFontFamilyOption(computed.fontFamily);
-      fontSizeControl.value = parseInt(computed.fontSize, 10) || 28;
-      fontWeightControl.value = normalizeWeightOption(computed.fontWeight);
-      textColorControl.value = toHexColor(computed.color, "#14213d");
-      backgroundColorControl.value = toHexColor(computed.backgroundColor, "#ffffff");
-      textAlignControl.value = computed.textAlign || "left";
-      italicButton.setAttribute("aria-pressed", String(computed.fontStyle === "italic"));
-      underlineButton.setAttribute("aria-pressed", String((computed.textDecorationLine || "").includes("underline")));
-
-      if (appState.selectedElement.matches("[data-builder-node='text']")) {
-        selectionStatus.textContent = "Selected: text box";
-      } else {
-        selectionStatus.textContent = `Selected: ${target.tagName.toLowerCase()}`;
+      if (imageTarget) {
+        const computed = previewFrame.contentWindow.getComputedStyle(imageTarget);
+        imageWidthControl.value = Math.max(1, Math.round(imageTarget.getBoundingClientRect().width));
+        imageHeightControl.value = Math.max(1, Math.round(imageTarget.getBoundingClientRect().height));
+        imageRadiusControl.value = Math.max(0, Math.round(parseFloat(computed.borderTopLeftRadius) || 0));
+        imageOpacityControl.value = Math.round((parseFloat(computed.opacity) || 1) * 100);
+        imageRotateControl.value = Math.round(getTransformValue(imageTarget, "data-editor-rotate"));
+        imageObjectFitControl.value = computed.objectFit || "fill";
+        imageFilterControl.value = matchImageFilterPreset(imageTarget.style.filter || computed.filter);
       }
     }
 
@@ -1523,6 +2233,12 @@
       return "400";
     }
 
+    function matchImageFilterPreset(filterValue) {
+      const normalized = (filterValue || "").trim();
+      const match = Object.entries(IMAGE_FILTER_PRESETS).find(([, value]) => value === normalized);
+      return match ? match[0] : "none";
+    }
+
     function applyInlineStyleToSelection(property, value) {
       const target = getSelectedTextTarget();
       if (!target) {
@@ -1530,8 +2246,9 @@
       }
 
       target.style[property] = value;
-      updateStyleToolbarState();
+      updateToolbarState();
       syncSourceFromPreview();
+      scheduleOverlayRefresh();
     }
 
     function toggleTextStyle(property, activeValue, button) {
@@ -1545,7 +2262,8 @@
       target.style[property] = isActive ? "normal" : activeValue;
       button.setAttribute("aria-pressed", String(!isActive));
       syncSourceFromPreview();
-      updateStyleToolbarState();
+      updateToolbarState();
+      scheduleOverlayRefresh();
     }
 
     function toggleTextDecoration() {
@@ -1559,7 +2277,48 @@
       target.style.textDecoration = hasUnderline ? "none" : "underline";
       underlineButton.setAttribute("aria-pressed", String(!hasUnderline));
       syncSourceFromPreview();
-      updateStyleToolbarState();
+      updateToolbarState();
+      scheduleOverlayRefresh();
+    }
+
+    function applyImageStyle(property, value) {
+      const image = getSelectedImageTarget();
+      if (!image) {
+        return;
+      }
+
+      image.style[property] = value;
+      updateToolbarState();
+      syncSourceFromPreview();
+      scheduleOverlayRefresh();
+    }
+
+    function applyImageDimension(property, rawValue) {
+      const image = getSelectedImageTarget();
+      if (!image) {
+        return;
+      }
+
+      const numericValue = Math.max(1, Number(rawValue) || 1);
+      image.style[property] = `${numericValue}px`;
+      if (!image.style.objectFit) {
+        image.style.objectFit = "cover";
+      }
+      updateToolbarState();
+      syncSourceFromPreview();
+      scheduleOverlayRefresh();
+    }
+
+    function replaceSelectedImage() {
+      const image = getSelectedImageTarget();
+      if (!image) {
+        return;
+      }
+
+      appState.imagePickerMode = "replace-image";
+      appState.pendingImageTarget = image;
+      imagePicker.value = "";
+      imagePicker.click();
     }
 
     function toHexColor(colorValue, fallback) {
@@ -1577,63 +2336,35 @@
     }
 
     function createNewPage() {
-      clearSelection(false);
-      sourceInput.value = createBlankPageDocument();
-      updateSourceStats();
-      renderFromSource();
-      editorStatus.textContent = "Created blank page";
-      previewHint.textContent = "Use Add Text or Add Image to build a new page from scratch.";
-    }
-
-    function createBlankPageDocument() {
-      return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Untitled Page</title>
-</head>
-<body style="margin:0; min-height:100vh; padding:40px 24px; background:linear-gradient(180deg, #eef3fb, #f8fbff); font-family:'Aptos', 'Segoe UI Variable', 'Segoe UI', sans-serif;">
-  <section data-builder-page="true" style="position:relative; width:min(1120px, 100%); min-height:720px; margin:0 auto; background:#ffffff; border:1px solid rgba(20, 33, 61, 0.08); border-radius:28px; box-shadow:0 28px 80px rgba(20, 33, 61, 0.14); overflow:hidden;"></section>
-</body>
-</html>`;
-    }
-
-    function ensureCurrentPage(previewDocument, createIfMissing) {
+      const previewDocument = previewFrame.contentDocument;
       if (!previewDocument) {
-        return null;
+        return;
       }
 
-      if (appState.selectedElement) {
-        const selectedPage = appState.selectedElement.closest("[data-builder-page='true']");
-        if (selectedPage) {
-          return selectedPage;
-        }
-      }
+      const page = createBlankPageSection(previewDocument);
+      previewDocument.body.appendChild(page);
+      initializePageModel(previewDocument);
+      markInteractiveNodes(previewDocument);
+      setCurrentPage(page, { scroll: true });
+      selectElement(page);
+      syncSourceFromPreview();
+      editorStatus.textContent = "Added new page";
+      previewHint.textContent = "The new page is ready. Add text or images to the current page, or drag selected elements into place.";
+    }
 
-      const firstPage = previewDocument.querySelector("[data-builder-page='true']");
-      if (firstPage) {
-        return firstPage;
-      }
-
-      if (!createIfMissing) {
-        return null;
-      }
-
+    function createBlankPageSection(previewDocument) {
       const page = previewDocument.createElement("section");
       page.setAttribute("data-builder-page", "true");
       page.style.position = "relative";
-      page.style.width = "min(1120px, 100%)";
+      page.style.width = "min(1120px, calc(100% - 32px))";
       page.style.minHeight = "720px";
-      page.style.margin = "40px auto";
+      page.style.margin = "0 auto 28px";
+      page.style.padding = "36px";
       page.style.background = "#ffffff";
       page.style.border = "1px solid rgba(20, 33, 61, 0.08)";
       page.style.borderRadius = "28px";
       page.style.boxShadow = "0 28px 80px rgba(20, 33, 61, 0.14)";
       page.style.overflow = "hidden";
-
-      previewDocument.body.appendChild(page);
-      syncSourceFromPreview();
       return page;
     }
 
@@ -1648,37 +2379,29 @@
       const node = previewDocument.createElement("div");
       node.setAttribute("data-builder-node", "text");
       node.style.position = "absolute";
-      node.style.left = `${getBuilderOffset(page, 64)}px`;
-      node.style.top = `${getBuilderOffset(page, 84)}px`;
+      node.style.left = `${getBuilderOffset(page, 70)}px`;
+      node.style.top = `${getBuilderOffset(page, 88)}px`;
       node.style.width = "320px";
-      node.style.minHeight = "70px";
-      node.style.margin = "0";
+      node.style.minHeight = "72px";
+      node.style.padding = "16px 18px";
+      node.style.borderRadius = "20px";
+      node.style.background = "rgba(255, 255, 255, 0.94)";
+      node.style.boxShadow = "0 10px 28px rgba(20, 33, 61, 0.08)";
+      node.style.color = "#14213d";
+      node.style.fontFamily = "Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif";
+      node.style.fontSize = "32px";
+      node.style.fontWeight = "600";
+      node.style.lineHeight = "1.2";
+      node.style.textAlign = "left";
+      node.textContent = "Click to edit text";
 
-      const content = previewDocument.createElement("div");
-      content.setAttribute("data-builder-content", "true");
-      content.textContent = "Click to edit text";
-      content.style.minHeight = "70px";
-      content.style.padding = "16px 18px";
-      content.style.borderRadius = "20px";
-      content.style.background = "rgba(255, 255, 255, 0.92)";
-      content.style.boxShadow = "0 10px 28px rgba(20, 33, 61, 0.08)";
-      content.style.color = "#14213d";
-      content.style.fontFamily = "Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif";
-      content.style.fontSize = "32px";
-      content.style.fontWeight = "600";
-      content.style.lineHeight = "1.2";
-      content.style.textAlign = "left";
-
-      node.appendChild(content);
-      ensureBuilderHandle(node);
       page.appendChild(node);
-      markEditableNodes(node);
+      markInteractiveNodes(previewDocument);
       selectElement(node);
       syncSourceFromPreview();
-      updateStyleToolbarState();
-      focusTextNodeContent(node);
-      editorStatus.textContent = "Added text box";
-      previewHint.textContent = "Type directly in the new text box, or drag it by the Move handle.";
+      focusEditableElement(node);
+      editorStatus.textContent = "Added text";
+      previewHint.textContent = "Type directly in the new text block, then drag it with the Move handle when you need to reposition it.";
     }
 
     function addImageNodeToCurrentPage(dataUrl, fileName) {
@@ -1689,48 +2412,42 @@
         return;
       }
 
-      const node = previewDocument.createElement("figure");
-      node.setAttribute("data-builder-node", "image");
-      node.style.position = "absolute";
-      node.style.left = `${getBuilderOffset(page, 80)}px`;
-      node.style.top = `${getBuilderOffset(page, 130)}px`;
-      node.style.width = "300px";
-      node.style.margin = "0";
-
       const image = previewDocument.createElement("img");
+      image.setAttribute("data-builder-node", "image");
       image.src = dataUrl;
       image.alt = fileName ? fileName.replace(/\.[^.]+$/, "") : "Inserted image";
+      image.style.position = "absolute";
+      image.style.left = `${getBuilderOffset(page, 84)}px`;
+      image.style.top = `${getBuilderOffset(page, 126)}px`;
+      image.style.width = "320px";
+      image.style.height = "220px";
       image.style.display = "block";
-      image.style.width = "100%";
-      image.style.height = "auto";
-      image.style.borderRadius = "20px";
+      image.style.objectFit = "cover";
+      image.style.borderRadius = "22px";
       image.style.boxShadow = "0 18px 36px rgba(20, 33, 61, 0.16)";
 
-      node.appendChild(image);
-      ensureBuilderHandle(node);
-      page.appendChild(node);
-      markImages(node);
-      selectElement(node);
+      page.appendChild(image);
+      markInteractiveNodes(previewDocument);
+      selectElement(image);
       syncSourceFromPreview();
       editorStatus.textContent = "Added image";
-      previewHint.textContent = "Drag the new image by its Move handle, or double-click it to replace it.";
+      previewHint.textContent = "Use the image controls for dimensions and styling, or drag the selected image with the Move handle.";
     }
 
     function getBuilderOffset(page, baseOffset) {
       const count = page.querySelectorAll("[data-builder-node]").length;
-      return baseOffset + (count % 6) * 22;
+      return baseOffset + (count % 6) * 26;
     }
 
-    function focusTextNodeContent(node) {
-      const content = node.querySelector("[data-builder-content='true']");
-      if (!content) {
+    function focusEditableElement(element) {
+      if (!element.matches("[data-editor-text-editable='true']")) {
         return;
       }
 
-      content.focus();
+      element.focus();
       const selection = previewFrame.contentWindow.getSelection();
-      const range = content.ownerDocument.createRange();
-      range.selectNodeContents(content);
+      const range = element.ownerDocument.createRange();
+      range.selectNodeContents(element);
       range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
@@ -1755,14 +2472,10 @@
           appState.pendingImageTarget.setAttribute("src", reader.result);
           appState.pendingImageTarget.removeAttribute("srcset");
           appState.pendingImageTarget.removeAttribute("sizes");
-
-          if (appState.pendingImageTarget.closest("[data-builder-node='image']")) {
-            const wrapper = appState.pendingImageTarget.closest("[data-builder-node='image']");
-            selectElement(wrapper);
-          } else {
-            selectElement(appState.pendingImageTarget);
+          if (!appState.pendingImageTarget.getAttribute("alt")) {
+            appState.pendingImageTarget.setAttribute("alt", file.name.replace(/\.[^.]+$/, ""));
           }
-
+          selectElement(appState.pendingImageTarget);
           syncSourceFromPreview();
           editorStatus.textContent = "Image updated";
           previewHint.textContent = `Embedded ${file.name} as a Base64 data URL.`;
@@ -1792,9 +2505,11 @@
     function serializePreviewDocument(previewDocument, forExport) {
       const clone = previewDocument.documentElement.cloneNode(true);
       clone.querySelector("#editor-preview-style")?.remove();
-      clone.querySelectorAll("[data-editor-handle]").forEach((handle) => handle.remove());
+      clone.querySelectorAll("[data-editor-overlay-root]").forEach((overlay) => overlay.remove());
 
       clone.querySelectorAll("*").forEach((element) => {
+        finalizeClonedTransform(element);
+
         Array.from(element.attributes).forEach((attribute) => {
           if (attribute.name.startsWith("data-editor-")) {
             element.removeAttribute(attribute.name);
@@ -1807,13 +2522,33 @@
 
         element.removeAttribute("contenteditable");
         element.removeAttribute("spellcheck");
-
-        if (element.getAttribute("title") === "Click to replace this image" || element.getAttribute("title") === "Double-click to replace this image") {
-          element.removeAttribute("title");
-        }
       });
 
       return `${appState.lastDoctype}\n${clone.outerHTML}`;
+    }
+
+    function finalizeClonedTransform(element) {
+      const baseTransform = element.getAttribute("data-editor-base-transform") || "";
+      const translateX = Number.parseFloat(element.getAttribute("data-editor-translate-x") || "0") || 0;
+      const translateY = Number.parseFloat(element.getAttribute("data-editor-translate-y") || "0") || 0;
+      const rotate = Number.parseFloat(element.getAttribute("data-editor-rotate") || "0") || 0;
+
+      if (!baseTransform && !translateX && !translateY && !rotate) {
+        return;
+      }
+
+      const parts = [];
+      if (baseTransform) {
+        parts.push(baseTransform);
+      }
+      if (translateX || translateY) {
+        parts.push(`translate(${Math.round(translateX)}px, ${Math.round(translateY)}px)`);
+      }
+      if (rotate) {
+        parts.push(`rotate(${rotate}deg)`);
+      }
+
+      element.style.transform = parts.join(" ").trim();
     }
 
     function exportEditedPage() {
@@ -1836,7 +2571,7 @@
       URL.revokeObjectURL(downloadUrl);
 
       editorStatus.textContent = "Exported edited_presentation.html";
-      previewHint.textContent = "The downloaded file keeps content, positions, and inline styles, without editor-only UI.";
+      previewHint.textContent = "The exported file preserves page structure, positions, inline styles, and content changes without editor-only UI.";
     }
 
     function buildSanitizationLabel(stats) {
