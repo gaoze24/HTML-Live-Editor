@@ -383,7 +383,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 0.75rem;
-      padding: 0.72rem 0.9rem 0.66rem;
+      padding: 0.62rem 0.84rem 0.56rem;
       border-bottom: 1px solid var(--border);
       background: var(--panel-strong);
       flex-shrink: 0;
@@ -441,9 +441,9 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
+      gap: 0.5rem;
       overflow: hidden;
-      padding: 0.75rem;
+      padding: 0.68rem;
     }
 
     .preview-panel__body {
@@ -515,10 +515,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.55rem;
+      gap: 0.4rem;
       flex-wrap: wrap;
       color: var(--muted);
-      font-size: 0.74rem;
+      font-size: 0.72rem;
+    }
+
+    #sourceContextHint[hidden] + #sourceStats {
+      margin-left: auto;
     }
 
     .source-input {
@@ -793,14 +797,14 @@
         <div class="panel__header">
           <div>
             <h2 id="sourcePanelTitle">Source HTML</h2>
-            <p id="sourcePanelDescription">Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
+            <p id="sourcePanelDescription" hidden></p>
           </div>
           <span class="helper-pill" id="sanitizationBadge">Safe preview ready</span>
         </div>
 
         <div class="source-panel__body">
           <div class="helper-row">
-            <span id="sourceContextHint">Rendered preview stays editable, movable, and exportable.</span>
+            <span id="sourceContextHint" hidden></span>
             <span id="sourceStats">0 characters</span>
           </div>
 
@@ -815,14 +819,14 @@
         <div class="panel__header">
           <div>
             <h2>Live Preview</h2>
-            <p id="previewPanelDescription">Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.</p>
+            <p id="previewPanelDescription" hidden></p>
           </div>
           <span class="helper-pill" id="editorStatus">Ready</span>
         </div>
 
         <div class="preview-panel__body">
-          <div class="helper-row">
-            <span class="status" id="previewHint">Text controls appear for text elements. Image controls appear for images.</span>
+          <div class="helper-row" id="previewHintRow" hidden>
+            <span class="status" id="previewHint"></span>
           </div>
 
           <div class="preview-split" id="previewSplit">
@@ -1541,6 +1545,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     const sourcePanelDescription = document.getElementById("sourcePanelDescription");
     const sourceContextHint = document.getElementById("sourceContextHint");
     const previewPanelDescription = document.getElementById("previewPanelDescription");
+    const previewHintRow = document.getElementById("previewHintRow");
     const previewSplit = document.getElementById("previewSplit");
     const notesResizeHandle = document.getElementById("notesResizeHandle");
     const presenterNotesPanel = document.getElementById("presenterNotesPanel");
@@ -1628,7 +1633,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
         loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
         editorStatus.textContent = "New HTML document ready";
-        previewHint.textContent = "You are back in normal HTML mode with the starter page loaded.";
+        setPreviewHint("You are back in normal HTML mode with the starter page loaded.");
       });
 
       newRemarkButton.addEventListener("click", () => {
@@ -1638,7 +1643,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
         loadRemarkModel(createDefaultRemarkModel(), { fileName: "remark_deck.html" });
         editorStatus.textContent = "New remark deck ready";
-        previewHint.textContent = "Slides now live inside a remark-compatible textarea source. Add more slides from the toolbar when you need them.";
+        setPreviewHint("Slides now live inside a remark-compatible textarea source. Add more slides from the toolbar when you need them.");
       });
 
       newPageButton.addEventListener("click", createNewPage);
@@ -1990,6 +1995,26 @@ Edit the slide source on the left, or add text and images directly in the previe
       appState.isUpdatingSourceInternally = false;
     }
 
+    function setSourcePanelDescription(message) {
+      sourcePanelDescription.textContent = message || "";
+      sourcePanelDescription.hidden = !message;
+    }
+
+    function setSourceContextHint(message) {
+      sourceContextHint.textContent = message || "";
+      sourceContextHint.hidden = !message;
+    }
+
+    function setPreviewPanelDescription(message) {
+      previewPanelDescription.textContent = message || "";
+      previewPanelDescription.hidden = !message;
+    }
+
+    function setPreviewHint(message) {
+      previewHint.textContent = message || "";
+      previewHintRow.hidden = !message;
+    }
+
     function updateModeUi() {
       const inRemarkMode = isRemarkMode();
       if (!inRemarkMode && appState.presenterView) {
@@ -2006,16 +2031,14 @@ Edit the slide source on the left, or add text and images directly in the previe
 
       if (inRemarkMode) {
         sourcePanelTitle.textContent = "Remark Slide Source";
-        sourcePanelDescription.textContent = "Edit the textarea-backed remark deck source directly. Slides stay separated by --- and export returns to a compatible wrapper HTML file.";
-        sourceContextHint.textContent = "Slide metadata lines like class:, name:, and layout: are preserved and round-trip back into <textarea id=\"source\">.";
-        previewPanelDescription.textContent = "";
-        previewPanelDescription.hidden = true;
+        setSourcePanelDescription("");
+        setSourceContextHint("");
+        setPreviewPanelDescription("");
       } else {
         sourcePanelTitle.textContent = "Source HTML";
-        sourcePanelDescription.textContent = "Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.";
-        sourceContextHint.textContent = "Rendered preview stays editable, movable, and exportable.";
-        previewPanelDescription.textContent = "Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.";
-        previewPanelDescription.hidden = false;
+        setSourcePanelDescription("");
+        setSourceContextHint("");
+        setPreviewPanelDescription("");
       }
 
       updatePresenterViewUi();
@@ -2040,11 +2063,11 @@ Edit the slide source on the left, or add text and images directly in the previe
         if (detectRemarkHtml(reader.result)) {
           loadRemarkDocumentFromHtml(reader.result, { fileName: file.name || "remark_deck.html" });
           editorStatus.textContent = `Imported ${file.name} in remark mode`;
-          previewHint.textContent = "";
+          setPreviewHint("");
         } else {
           loadNormalDocument(reader.result, { fileName: file.name || "edited_presentation.html" });
           editorStatus.textContent = `Imported ${file.name}`;
-          previewHint.textContent = "Imported HTML is now the preview source. The same sanitizer used for pasted HTML is applied before rendering.";
+          setPreviewHint("Imported HTML is now the preview source. The same sanitizer used for pasted HTML is applied before rendering.");
         }
       };
 
@@ -2067,14 +2090,14 @@ Edit the slide source on the left, or add text and images directly in the previe
         ensureRemarkSlidesExist(appState.documentModel);
         renderCurrentDocument();
         editorStatus.textContent = "Rendered remark source";
-        previewHint.textContent = "Slide separators, metadata, and markdown-like content have been re-parsed into editable slides.";
+        setPreviewHint("Slide separators, metadata, and markdown-like content have been re-parsed into editable slides.");
         return;
       }
 
       if (detectRemarkHtml(rawValue)) {
         loadRemarkDocumentFromHtml(rawValue, { fileName: appState.exportFileName || "remark_deck.html" });
         editorStatus.textContent = "Switched to remark slideshow mode";
-        previewHint.textContent = "A remark-style wrapper was detected automatically, so the editor is now treating the file as a slide deck.";
+        setPreviewHint("A remark-style wrapper was detected automatically, so the editor is now treating the file as a slide deck.");
         return;
       }
 
@@ -2107,7 +2130,7 @@ Edit the slide source on the left, or add text and images directly in the previe
       const previewMarkup = buildPreviewMarkup(sanitizedDocument.document);
 
       editorStatus.textContent = "Rendering preview";
-      previewHint.textContent = "Click any element to select it. Use the Move handle on the selection outline for drag positioning.";
+      setPreviewHint("");
       sanitizationBadge.textContent = buildSanitizationLabel(sanitizedDocument.stats);
 
       previewFrame.onload = () => {
@@ -2121,7 +2144,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     function renderRemarkPreview() {
       const previewMarkup = buildRemarkPreviewMarkup(appState.documentModel);
       editorStatus.textContent = "Rendering remark preview";
-      previewHint.textContent = "Slides are editable pages. Use the source panel for raw slide structure, or edit visible content directly.";
+      setPreviewHint("Slides are editable pages. Use the source panel for raw slide structure, or edit visible content directly.");
       sanitizationBadge.textContent = "Remark slideshow mode";
 
       previewFrame.onload = () => {
@@ -2693,7 +2716,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         const target = event.target;
         if (target && target.nodeType === 1 && target.matches("[data-editor-text-editable='true']")) {
           event.preventDefault();
-          previewHint.textContent = "Tab stays inside the current text element so typing remains predictable.";
+          setPreviewHint("Tab stays inside the current text element so typing remains predictable.");
         }
       }
 
@@ -3257,7 +3280,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       presenterNotesStatus.textContent = slide.notesSource.trim() ? "Notes visible" : "No notes yet";
       editorStatus.textContent = "Presenter notes updated";
-      previewHint.textContent = "Presenter notes stay hidden from the audience preview and are preserved in export.";
+      setPreviewHint("Presenter notes stay hidden from the audience preview and are preserved in export.");
     }
 
     function matchFontFamilyOption(computedFamily) {
@@ -3420,7 +3443,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       selectElement(page);
       syncSourceFromPreview();
       editorStatus.textContent = "Added new page";
-      previewHint.textContent = "The new page is ready. Add text or images to the current page, or drag selected elements into place.";
+      setPreviewHint("The new page is ready. Add text or images to the current page, or drag selected elements into place.");
     }
 
     function createNewRemarkSlide() {
@@ -3435,7 +3458,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       renderCurrentDocument();
       editorStatus.textContent = "Added new slide";
-      previewHint.textContent = "The new slide is ready. Edit its class metadata in the toolbar or add visible content directly in the preview.";
+      setPreviewHint("The new slide is ready. Edit its class metadata in the toolbar or add visible content directly in the preview.");
     }
 
     function deleteSelectedElement() {
@@ -3454,7 +3477,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       syncSourceFromPreview();
       editorStatus.textContent = "Deleted selected element";
-      previewHint.textContent = "The selected element was removed and will not appear in export.";
+      setPreviewHint("The selected element was removed and will not appear in export.");
       updateToolbarState();
       scheduleOverlayRefresh();
     }
@@ -3462,7 +3485,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function deleteCurrentPage() {
       if (!canDeleteCurrentPage()) {
         editorStatus.textContent = isRemarkMode() ? "At least one slide must remain" : "At least one page must remain";
-        previewHint.textContent = "The final page is kept in place so the document stays valid.";
+        setPreviewHint("The final page is kept in place so the document stays valid.");
         updateToolbarState();
         return;
       }
@@ -3506,7 +3529,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       syncSourceFromPreview();
       editorStatus.textContent = "Deleted page";
-      previewHint.textContent = "The current page was removed and will not appear in export.";
+      setPreviewHint("The current page was removed and will not appear in export.");
       updateToolbarState();
       scheduleOverlayRefresh();
     }
@@ -3534,7 +3557,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       renderCurrentDocument();
       editorStatus.textContent = "Deleted slide";
-      previewHint.textContent = "The current slide was removed from the deck and will not be included in export.";
+      setPreviewHint("The current slide was removed from the deck and will not be included in export.");
     }
 
     function createBlankPageSection(previewDocument) {
@@ -3591,7 +3614,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       syncSourceFromPreview();
       focusEditableElement(node);
       editorStatus.textContent = "Added text";
-      previewHint.textContent = "Type directly in the new text block, then drag it with the Move handle when you need to reposition it.";
+      setPreviewHint("Type directly in the new text block, then drag it with the Move handle when you need to reposition it.");
     }
 
     function addImageNodeToCurrentPage(dataUrl, fileName) {
@@ -3621,7 +3644,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       selectElement(image);
       syncSourceFromPreview();
       editorStatus.textContent = "Added image";
-      previewHint.textContent = "Use the image controls for dimensions and styling, or drag the selected image with the Move handle.";
+      setPreviewHint("Use the image controls for dimensions and styling, or drag the selected image with the Move handle.");
     }
 
     function getBuilderOffset(page, baseOffset) {
@@ -3668,7 +3691,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           selectElement(appState.pendingImageTarget);
           syncSourceFromPreview();
           editorStatus.textContent = "Image updated";
-          previewHint.textContent = `Embedded ${file.name} as a Base64 data URL.`;
+          setPreviewHint(`Embedded ${file.name} as a Base64 data URL.`);
         }
 
         appState.pendingImageTarget = null;
@@ -3781,7 +3804,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const finalHtml = `${sanitized.doctype}\n${sanitized.document.documentElement.outerHTML}`;
       triggerDownload(finalHtml, appState.exportFileName || "edited_presentation.html");
       editorStatus.textContent = `Exported ${appState.exportFileName || "edited_presentation.html"}`;
-      previewHint.textContent = "The exported file preserves page structure, positions, inline styles, and content changes without editor-only UI.";
+      setPreviewHint("The exported file preserves page structure, positions, inline styles, and content changes without editor-only UI.");
     }
 
     function exportRemarkDocument() {
@@ -3796,7 +3819,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       triggerDownload(finalHtml, appState.exportFileName || "remark_deck.html");
       editorStatus.textContent = `Exported ${appState.exportFileName || "remark_deck.html"}`;
-      previewHint.textContent = "The exported file is a remark-compatible slideshow wrapper with your updated slide source stored inside <textarea id=\"source\">.";
+      setPreviewHint("The exported file is a remark-compatible slideshow wrapper with your updated slide source stored inside <textarea id=\"source\">.");
     }
 
     function triggerDownload(content, fileName) {
@@ -3855,7 +3878,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       editorStatus.textContent = "Updated slide class";
-      previewHint.textContent = "Slide-level classes now apply to the current preview page and are preserved on export.";
+      setPreviewHint("Slide-level classes now apply to the current preview page and are preserved on export.");
     }
 
     function detectRemarkHtml(rawHtml) {
