@@ -1260,6 +1260,29 @@ Edit the slide source on the left, or add text and images directly in the previe
           z-index: 2147483647;
         }
 
+        :where([data-editor-guide-layer="true"]) {
+          all: initial;
+          display: block;
+          box-sizing: border-box;
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        :where([data-editor-guide-line="true"]) {
+          all: initial;
+          display: block;
+          box-sizing: border-box;
+          position: fixed;
+          border-radius: 999px;
+          background: rgba(15, 123, 255, 0.96);
+          box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.82),
+            0 0 18px rgba(15, 123, 255, 0.22);
+          opacity: 0.96;
+          pointer-events: none;
+        }
+
         :where([data-editor-selection-box="true"]) {
           all: initial;
           box-sizing: border-box;
@@ -1494,6 +1517,7 @@ Edit the slide source on the left, or add text and images directly in the previe
       renderTimer: null,
       previewSyncTimer: null,
       overlaySyncFrame: null,
+      activeAlignmentGuides: null,
       selectedElement: null,
       selectedPage: null,
       pendingImageTarget: null,
@@ -1509,6 +1533,9 @@ Edit the slide source on the left, or add text and images directly in the previe
       sourcePaneSize: 480,
       notesPaneSize: 224
     };
+
+    const ALIGNMENT_SNAP_THRESHOLD = 6;
+    const ALIGNMENT_GUIDE_THICKNESS = 2;
 
     const STORAGE_KEYS = {
       sourcePaneSize: "html-live-editor:source-pane-size",
@@ -2616,11 +2643,56 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const root = previewDocument.createElement("div");
       root.setAttribute("data-editor-overlay-root", "true");
       root.innerHTML = `
+        <div data-editor-guide-layer="true"></div>
         <div data-editor-selection-box="true">
           <button type="button" data-editor-move-handle="true">Move</button>
         </div>
       `;
       previewDocument.body.appendChild(root);
+    }
+
+    function renderAlignmentGuides(previewDocument, guides) {
+      const guideLayer = previewDocument?.querySelector("[data-editor-guide-layer='true']");
+      if (!guideLayer) {
+        appState.activeAlignmentGuides = null;
+        return;
+      }
+
+      if (!Array.isArray(guides) || !guides.length) {
+        appState.activeAlignmentGuides = null;
+        guideLayer.replaceChildren();
+        return;
+      }
+
+      appState.activeAlignmentGuides = guides.map((guide) => ({ ...guide }));
+      const nodes = guides.map((guide) => {
+        const line = previewDocument.createElement("div");
+        const start = Math.round(Math.min(guide.start, guide.end));
+        const end = Math.round(Math.max(guide.start, guide.end));
+        line.setAttribute("data-editor-guide-line", "true");
+        line.setAttribute("data-axis", guide.axis);
+
+        if (guide.axis === "x") {
+          line.style.left = `${Math.round(guide.position - ALIGNMENT_GUIDE_THICKNESS / 2)}px`;
+          line.style.top = `${start}px`;
+          line.style.width = `${ALIGNMENT_GUIDE_THICKNESS}px`;
+          line.style.height = `${Math.max(1, end - start)}px`;
+        } else {
+          line.style.left = `${start}px`;
+          line.style.top = `${Math.round(guide.position - ALIGNMENT_GUIDE_THICKNESS / 2)}px`;
+          line.style.width = `${Math.max(1, end - start)}px`;
+          line.style.height = `${ALIGNMENT_GUIDE_THICKNESS}px`;
+        }
+
+        return line;
+      });
+
+      guideLayer.replaceChildren(...nodes);
+    }
+
+    function clearAlignmentGuides(previewDocument = previewFrame.contentDocument) {
+      appState.activeAlignmentGuides = null;
+      previewDocument?.querySelector("[data-editor-guide-layer='true']")?.replaceChildren();
     }
 
     function bindPreviewEvents(previewDocument) {
@@ -2970,12 +3042,14 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         selectionBox.style.top = "";
         selectionBox.style.width = "";
         selectionBox.style.height = "";
+        clearAlignmentGuides(previewDocument);
         return;
       }
 
       const rect = appState.selectedElement.getBoundingClientRect();
       if (!rect.width || !rect.height) {
         selectionBox.removeAttribute("data-visible");
+        clearAlignmentGuides(previewDocument);
         return;
       }
 
@@ -2994,6 +3068,253 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       return element !== element.ownerDocument.body;
+    }
+
+    function createRectSnapshot(rect) {
+      const left = rect.left;
+      const top = rect.top;
+      const width = rect.width;
+      const height = rect.height;
+      return {
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        centerX: left + width / 2,
+        centerY: top + height / 2
+      };
+    }
+
+    function offsetRectSnapshot(rect, deltaX, deltaY) {
+      return {
+        left: rect.left + deltaX,
+        top: rect.top + deltaY,
+        width: rect.width,
+        height: rect.height,
+        right: rect.right + deltaX,
+        bottom: rect.bottom + deltaY,
+        centerX: rect.centerX + deltaX,
+        centerY: rect.centerY + deltaY
+      };
+    }
+
+    function getRectMetric(rect, axis, key) {
+      if (axis === "x") {
+        if (key === "left") {
+          return rect.left;
+        }
+
+        if (key === "right") {
+          return rect.right;
+        }
+
+        return rect.centerX;
+      }
+
+      if (key === "top") {
+        return rect.top;
+      }
+
+      if (key === "bottom") {
+        return rect.bottom;
+      }
+
+      return rect.centerY;
+    }
+
+    function collectAlignmentSiblings(draggedElement, page) {
+      return Array.from(page.querySelectorAll("[data-editor-selectable='true']")).reduce((result, candidate) => {
+        if (
+          candidate === draggedElement ||
+          candidate.matches("[data-editor-page='true']") ||
+          candidate.closest("[data-editor-overlay-root='true']") ||
+          draggedElement.contains(candidate) ||
+          candidate.contains(draggedElement)
+        ) {
+          return result;
+        }
+
+        const rect = createRectSnapshot(candidate.getBoundingClientRect());
+        if (!rect.width || !rect.height) {
+          return result;
+        }
+
+        result.push({ rect });
+        return result;
+      }, []);
+    }
+
+    function buildDragAlignmentContext(draggedElement, boundary) {
+      const page = draggedElement.matches("[data-editor-page='true']")
+        ? boundary
+        : (getElementPage(draggedElement) || boundary);
+
+      if (!page) {
+        return null;
+      }
+
+      const pageRect = createRectSnapshot(page.getBoundingClientRect());
+      const computed = previewFrame.contentWindow.getComputedStyle(page);
+      return {
+        pageRect,
+        safeBounds: {
+          left: pageRect.left + (Number.parseFloat(computed.paddingLeft) || 0),
+          right: pageRect.right - (Number.parseFloat(computed.paddingRight) || 0),
+          top: pageRect.top + (Number.parseFloat(computed.paddingTop) || 0),
+          bottom: pageRect.bottom - (Number.parseFloat(computed.paddingBottom) || 0)
+        },
+        siblingRects: draggedElement.matches("[data-editor-page='true']") ? [] : collectAlignmentSiblings(draggedElement, page)
+      };
+    }
+
+    function createAlignmentCandidate(axis, matchKey, currentValue, targetValue, priority, options = {}) {
+      const diff = targetValue - currentValue;
+      if (Math.abs(diff) > ALIGNMENT_SNAP_THRESHOLD) {
+        return null;
+      }
+
+      return {
+        axis,
+        matchKey,
+        position: targetValue,
+        diff,
+        priority,
+        scope: options.scope || "page",
+        siblingRect: options.siblingRect || null
+      };
+    }
+
+    function pickBetterAlignmentCandidate(current, candidate) {
+      if (!candidate) {
+        return current;
+      }
+
+      if (!current) {
+        return candidate;
+      }
+
+      const candidateDistance = Math.abs(candidate.diff);
+      const currentDistance = Math.abs(current.diff);
+      if (candidateDistance < currentDistance - 0.01) {
+        return candidate;
+      }
+
+      if (candidateDistance <= currentDistance + 0.01 && candidate.priority < current.priority) {
+        return candidate;
+      }
+
+      return current;
+    }
+
+    function findBestAlignment(axis, movingRect, alignmentContext) {
+      if (!alignmentContext) {
+        return null;
+      }
+
+      const isHorizontal = axis === "x";
+      const pageTargets = isHorizontal
+        ? {
+          left: alignmentContext.safeBounds.left,
+          center: alignmentContext.pageRect.centerX,
+          right: alignmentContext.safeBounds.right
+        }
+        : {
+          top: alignmentContext.safeBounds.top,
+          center: alignmentContext.pageRect.centerY,
+          bottom: alignmentContext.safeBounds.bottom
+        };
+      const keys = isHorizontal ? ["left", "center", "right"] : ["top", "center", "bottom"];
+
+      return keys.reduce((best, key) => {
+        const currentValue = getRectMetric(movingRect, axis, key);
+        const pagePriority = key === "center" ? 0 : 2;
+        let nextBest = pickBetterAlignmentCandidate(
+          best,
+          createAlignmentCandidate(axis, key, currentValue, pageTargets[key], pagePriority, { scope: "page" })
+        );
+
+        alignmentContext.siblingRects.forEach(({ rect }) => {
+          const targetValue = getRectMetric(rect, axis, key);
+          const priority = key === "center" ? 1 : 3;
+          nextBest = pickBetterAlignmentCandidate(
+            nextBest,
+            createAlignmentCandidate(axis, key, currentValue, targetValue, priority, {
+              scope: "sibling",
+              siblingRect: rect
+            })
+          );
+        });
+
+        return nextBest;
+      }, null);
+    }
+
+    function isAlignmentSatisfied(candidate, rect) {
+      if (!candidate) {
+        return false;
+      }
+
+      return Math.abs(candidate.position - getRectMetric(rect, candidate.axis, candidate.matchKey)) <= 0.75;
+    }
+
+    function buildAlignmentGuide(candidate, movingRect, alignmentContext) {
+      if (!candidate || !alignmentContext) {
+        return null;
+      }
+
+      if (candidate.axis === "x") {
+        return {
+          axis: "x",
+          position: candidate.position,
+          start: candidate.scope === "page"
+            ? alignmentContext.pageRect.top
+            : Math.min(movingRect.top, candidate.siblingRect?.top ?? movingRect.top),
+          end: candidate.scope === "page"
+            ? alignmentContext.pageRect.bottom
+            : Math.max(movingRect.bottom, candidate.siblingRect?.bottom ?? movingRect.bottom)
+        };
+      }
+
+      return {
+        axis: "y",
+        position: candidate.position,
+        start: candidate.scope === "page"
+          ? alignmentContext.pageRect.left
+          : Math.min(movingRect.left, candidate.siblingRect?.left ?? movingRect.left),
+        end: candidate.scope === "page"
+          ? alignmentContext.pageRect.right
+          : Math.max(movingRect.right, candidate.siblingRect?.right ?? movingRect.right)
+      };
+    }
+
+    function resolveDragAlignment(proposedX, proposedY, dragState) {
+      const previewRect = offsetRectSnapshot(
+        dragState.startRect,
+        proposedX - dragState.startTranslateX,
+        proposedY - dragState.startTranslateY
+      );
+      const xCandidate = findBestAlignment("x", previewRect, dragState.alignmentContext);
+      const yCandidate = findBestAlignment("y", previewRect, dragState.alignmentContext);
+      const nextX = Math.round(clamp(proposedX + (xCandidate?.diff || 0), dragState.minX, dragState.maxX));
+      const nextY = Math.round(clamp(proposedY + (yCandidate?.diff || 0), dragState.minY, dragState.maxY));
+      const resolvedRect = offsetRectSnapshot(
+        dragState.startRect,
+        nextX - dragState.startTranslateX,
+        nextY - dragState.startTranslateY
+      );
+      const resolvedX = isAlignmentSatisfied(xCandidate, resolvedRect) ? xCandidate : null;
+      const resolvedY = isAlignmentSatisfied(yCandidate, resolvedRect) ? yCandidate : null;
+
+      return {
+        nextX,
+        nextY,
+        guides: [
+          buildAlignmentGuide(resolvedX, resolvedRect, dragState.alignmentContext),
+          buildAlignmentGuide(resolvedY, resolvedRect, dragState.alignmentContext)
+        ].filter(Boolean)
+      };
     }
 
     function startElementDrag(element, pointerEvent) {
@@ -3015,12 +3336,14 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const startY = pointerEvent.clientY;
       const startTranslateX = getTransformValue(element, "data-editor-translate-x");
       const startTranslateY = getTransformValue(element, "data-editor-translate-y");
-      const startRect = element.getBoundingClientRect();
-      const boundaryRect = boundary.getBoundingClientRect();
+      const startRect = createRectSnapshot(element.getBoundingClientRect());
+      const boundaryRect = createRectSnapshot(boundary.getBoundingClientRect());
+      const alignmentContext = buildDragAlignmentContext(element, boundary);
       const padding = 8;
 
       element.setAttribute("data-editor-dragging", "true");
       previewDocument.body.style.userSelect = "none";
+      clearAlignmentGuides(previewDocument);
 
       const onMove = (moveEvent) => {
         const deltaX = moveEvent.clientX - startX;
@@ -3033,16 +3356,28 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
         const nextX = clamp(startTranslateX + deltaX, minX, maxX);
         const nextY = clamp(startTranslateY + deltaY, minY, maxY);
+        const resolvedDrag = resolveDragAlignment(nextX, nextY, {
+          startRect,
+          startTranslateX,
+          startTranslateY,
+          minX,
+          maxX,
+          minY,
+          maxY,
+          alignmentContext
+        });
 
-        element.setAttribute("data-editor-translate-x", String(Math.round(nextX)));
-        element.setAttribute("data-editor-translate-y", String(Math.round(nextY)));
+        element.setAttribute("data-editor-translate-x", String(resolvedDrag.nextX));
+        element.setAttribute("data-editor-translate-y", String(resolvedDrag.nextY));
         applyManagedTransform(element);
+        renderAlignmentGuides(previewDocument, resolvedDrag.guides);
         scheduleOverlayRefresh();
       };
 
       const onUp = () => {
         element.removeAttribute("data-editor-dragging");
         previewDocument.body.style.userSelect = "";
+        clearAlignmentGuides(previewDocument);
         previewDocument.removeEventListener("pointermove", onMove);
         previewDocument.removeEventListener("pointerup", onUp);
         previewDocument.removeEventListener("pointercancel", onUp);
