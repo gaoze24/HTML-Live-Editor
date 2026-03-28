@@ -980,6 +980,8 @@ Edit the slide source on the left, or add text and images directly in the previe
           background:
             radial-gradient(circle at top left, rgba(15, 123, 255, 0.12), transparent 32%),
             linear-gradient(180deg, #eef3f8 0%, #e6edf7 100%);
+          --editor-page-width: min(1120px, calc(100% - 32px));
+          --editor-page-min-height: 720px;
         }
 
         html[data-editor-preview-root="true"] body[data-editor-preview="true"][data-editor-page="true"] {
@@ -993,6 +995,14 @@ Edit the slide source on the left, or add text and images directly in the previe
 
         html[data-editor-preview-root="true"] body[data-editor-multipage="true"] :where([data-editor-page="true"]:not(body)) {
           margin-bottom: 28px;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="normal-html"] :where([data-editor-page="true"]:not(body)) {
+          width: var(--editor-page-width);
+          min-height: var(--editor-page-min-height);
+          margin-left: auto;
+          margin-right: auto;
+          box-sizing: border-box;
         }
 
         :where([data-editor-page="true"][data-editor-page-kind="explicit"]),
@@ -1168,8 +1178,8 @@ Edit the slide source on the left, or add text and images directly in the previe
         }
 
         html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"]) {
-          width: min(1120px, calc(100% - 32px));
-          min-height: 630px;
+          width: var(--editor-page-width);
+          min-height: var(--editor-page-min-height);
           margin-inline: auto;
           padding: 54px 60px;
           background:
@@ -1554,6 +1564,7 @@ Edit the slide source on the left, or add text and images directly in the previe
         headHtml: DEFAULT_REMARK_HEAD.trim(),
         bodyTemplate: DEFAULT_REMARK_BODY,
         textareaAttributes: ` id="source"`,
+        pageDefaults: createDefaultPageDefaults("remark-slideshow"),
         slides: parseRemarkDeckSource(DEFAULT_REMARK_SOURCE)
       };
     }
@@ -1561,7 +1572,36 @@ Edit the slide source on the left, or add text and images directly in the previe
     function createNormalModel(rawHtml) {
       return {
         mode: "normal-html",
+        pageDefaults: createDefaultPageDefaults("normal-html"),
         rawHtml
+      };
+    }
+
+    function createDefaultPageDefaults(mode) {
+      if (mode === "remark-slideshow") {
+        return {
+          widthCss: "min(1120px, calc(100% - 32px))",
+          minHeightPx: 630,
+          paddingCss: "54px 60px",
+          backgroundCss: "#ffffff",
+          borderCss: "1px solid rgba(20, 33, 61, 0.08)",
+          borderRadiusCss: "30px",
+          boxShadowCss: "0 18px 52px rgba(15, 23, 42, 0.12)",
+          fontFamilyCss: "\"Aptos Display\", \"Segoe UI\", \"Trebuchet MS\", sans-serif",
+          colorCss: "#13203a"
+        };
+      }
+
+      return {
+        widthCss: "min(1120px, calc(100% - 32px))",
+        minHeightPx: 720,
+        paddingCss: "36px",
+        backgroundCss: "#ffffff",
+        borderCss: "1px solid rgba(20, 33, 61, 0.08)",
+        borderRadiusCss: "28px",
+        boxShadowCss: "0 28px 80px rgba(20, 33, 61, 0.14)",
+        fontFamilyCss: "\"Aptos Display\", \"Segoe UI\", \"Trebuchet MS\", sans-serif",
+        colorCss: "#14213d"
       };
     }
 
@@ -1874,6 +1914,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       previewDocument.body.setAttribute("data-editor-preview", "true");
       previewDocument.body.setAttribute("data-editor-mode", isRemarkMode() ? "remark-slideshow" : "normal-html");
       initializePageModel(previewDocument);
+      syncDocumentPageDefaultsFromPreview(previewDocument);
+      applyDocumentPageDefaults(previewDocument);
       markInteractiveNodes(previewDocument);
       ensureEditorOverlay(previewDocument);
       bindPreviewEvents(previewDocument);
@@ -3068,17 +3110,21 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function createBlankPageSection(previewDocument) {
+      const pageDefaults = appState.documentModel?.pageDefaults || createDefaultPageDefaults("normal-html");
       const page = previewDocument.createElement("section");
       page.setAttribute("data-builder-page", "true");
       page.style.position = "relative";
-      page.style.width = "min(1120px, calc(100% - 32px))";
-      page.style.minHeight = "720px";
+      page.style.display = "block";
+      page.style.width = pageDefaults.widthCss;
+      page.style.minHeight = `${pageDefaults.minHeightPx}px`;
       page.style.margin = "0 auto 28px";
-      page.style.padding = "36px";
-      page.style.background = "#ffffff";
-      page.style.border = "1px solid rgba(20, 33, 61, 0.08)";
-      page.style.borderRadius = "28px";
-      page.style.boxShadow = "0 28px 80px rgba(20, 33, 61, 0.14)";
+      page.style.padding = pageDefaults.paddingCss;
+      page.style.background = pageDefaults.backgroundCss;
+      page.style.border = pageDefaults.borderCss;
+      page.style.borderRadius = pageDefaults.borderRadiusCss;
+      page.style.boxShadow = pageDefaults.boxShadowCss;
+      page.style.fontFamily = pageDefaults.fontFamilyCss;
+      page.style.color = pageDefaults.colorCss;
       page.style.overflow = "hidden";
       return page;
     }
@@ -3086,6 +3132,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function addTextBoxToCurrentPage() {
       const previewDocument = previewFrame.contentDocument;
       const page = ensureCurrentPage(previewDocument, true);
+      const pageDefaults = appState.documentModel?.pageDefaults || createDefaultPageDefaults(isRemarkMode() ? "remark-slideshow" : "normal-html");
 
       if (!previewDocument || !page) {
         return;
@@ -3102,8 +3149,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       node.style.borderRadius = "20px";
       node.style.background = "rgba(255, 255, 255, 0.94)";
       node.style.boxShadow = "0 10px 28px rgba(20, 33, 61, 0.08)";
-      node.style.color = "#14213d";
-      node.style.fontFamily = "Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif";
+      node.style.color = pageDefaults.colorCss;
+      node.style.fontFamily = pageDefaults.fontFamilyCss;
       node.style.fontSize = "32px";
       node.style.fontWeight = "600";
       node.style.lineHeight = "1.2";
@@ -3423,8 +3470,168 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         headHtml: (documentNode.head.innerHTML || DEFAULT_REMARK_HEAD.trim()).trim(),
         bodyTemplate,
         textareaAttributes,
+        pageDefaults: createDefaultPageDefaults("remark-slideshow"),
         slides: parseRemarkDeckSource(sourceValue)
       };
+    }
+
+    function applyDocumentPageDefaults(previewDocument) {
+      if (!previewDocument || !appState.documentModel?.pageDefaults) {
+        return;
+      }
+
+      const defaults = appState.documentModel.pageDefaults;
+      previewDocument.body.style.setProperty("--editor-page-width", defaults.widthCss);
+      previewDocument.body.style.setProperty("--editor-page-min-height", `${defaults.minHeightPx}px`);
+    }
+
+    function syncDocumentPageDefaultsFromPreview(previewDocument) {
+      if (!previewDocument || !appState.documentModel) {
+        return;
+      }
+
+      const pages = getPageElements(previewDocument);
+      if (!pages.length) {
+        return;
+      }
+
+      const inferredDefaults = inferPageDefaultsFromPage(pages[0], appState.documentModel.mode);
+      if (!inferredDefaults) {
+        return;
+      }
+
+      appState.documentModel.pageDefaults = inferredDefaults;
+    }
+
+    function inferPageDefaultsFromPage(page, mode) {
+      const fallback = createDefaultPageDefaults(mode);
+      if (!page || !previewFrame.contentWindow) {
+        return fallback;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(page);
+      const rect = page.getBoundingClientRect();
+      const viewportWidth = previewFrame.contentDocument?.documentElement?.clientWidth || rect.width || 0;
+
+      let widthCss = fallback.widthCss;
+      const explicitWidth = (page.style.width || "").trim();
+      if (explicitWidth) {
+        widthCss = explicitWidth;
+      } else if (rect.width > 0 && viewportWidth > 0 && rect.width < viewportWidth - 56) {
+        widthCss = `${Math.round(rect.width)}px`;
+      }
+
+      let minHeightPx = fallback.minHeightPx;
+      const explicitMinHeight = parsePixelValue(page.style.minHeight);
+      const explicitHeight = parsePixelValue(page.style.height);
+      const computedMinHeight = parsePixelValue(computed.minHeight);
+      const computedHeight = parsePixelValue(computed.height);
+
+      if (explicitMinHeight > 0) {
+        minHeightPx = explicitMinHeight;
+      } else if (explicitHeight > 0) {
+        minHeightPx = explicitHeight;
+      } else if (computedMinHeight > 0) {
+        minHeightPx = computedMinHeight;
+      } else if ((page.hasAttribute("data-builder-page") || mode === "remark-slideshow") && computedHeight > 0) {
+        minHeightPx = computedHeight;
+      }
+
+      const paddingCss = inferPaddingCss(page, computed, fallback.paddingCss);
+      const backgroundCss = inferBackgroundCss(page, computed, fallback.backgroundCss);
+      const borderCss = inferBorderCss(page, computed, fallback.borderCss);
+      const borderRadiusCss = inferBorderRadiusCss(page, computed, fallback.borderRadiusCss);
+      const boxShadowCss = inferBoxShadowCss(page, computed, fallback.boxShadowCss);
+      const fontFamilyCss = (page.style.fontFamily || computed.fontFamily || fallback.fontFamilyCss).trim() || fallback.fontFamilyCss;
+      const colorCss = inferColorCss(page, computed, fallback.colorCss);
+
+      return {
+        widthCss,
+        minHeightPx: Math.max(360, Math.round(minHeightPx)),
+        paddingCss,
+        backgroundCss,
+        borderCss,
+        borderRadiusCss,
+        boxShadowCss,
+        fontFamilyCss,
+        colorCss
+      };
+    }
+
+    function parsePixelValue(value) {
+      if (!value || value === "auto" || value === "none") {
+        return 0;
+      }
+
+      const match = String(value).match(/-?\d+(\.\d+)?/);
+      return match ? Number.parseFloat(match[0]) || 0 : 0;
+    }
+
+    function inferPaddingCss(page, computed, fallback) {
+      if ((page.style.padding || "").trim()) {
+        return page.style.padding.trim();
+      }
+
+      const values = [
+        computed.paddingTop,
+        computed.paddingRight,
+        computed.paddingBottom,
+        computed.paddingLeft
+      ].map((value) => value || "0px");
+
+      return values.some((value) => parsePixelValue(value) > 0) ? values.join(" ") : fallback;
+    }
+
+    function inferBackgroundCss(page, computed, fallback) {
+      if ((page.style.background || "").trim()) {
+        return page.style.background.trim();
+      }
+
+      if (computed.backgroundImage && computed.backgroundImage !== "none") {
+        return computed.background;
+      }
+
+      const color = computed.backgroundColor || "";
+      return isTransparentColor(color) ? fallback : color;
+    }
+
+    function inferBorderCss(page, computed, fallback) {
+      if ((page.style.border || "").trim()) {
+        return page.style.border.trim();
+      }
+
+      const width = parsePixelValue(computed.borderTopWidth);
+      return width > 0 ? computed.border : fallback;
+    }
+
+    function inferBorderRadiusCss(page, computed, fallback) {
+      if ((page.style.borderRadius || "").trim()) {
+        return page.style.borderRadius.trim();
+      }
+
+      const radius = parsePixelValue(computed.borderTopLeftRadius);
+      return radius > 0 ? computed.borderRadius : fallback;
+    }
+
+    function inferBoxShadowCss(page, computed, fallback) {
+      if ((page.style.boxShadow || "").trim()) {
+        return page.style.boxShadow.trim();
+      }
+
+      return computed.boxShadow && computed.boxShadow !== "none" ? computed.boxShadow : fallback;
+    }
+
+    function inferColorCss(page, computed, fallback) {
+      if ((page.style.color || "").trim()) {
+        return page.style.color.trim();
+      }
+
+      const color = computed.color || "";
+      return color && !isTransparentColor(color) ? color : fallback;
+    }
+
+    function isTransparentColor(value) {
+      return !value || value === "transparent" || value === "rgba(0, 0, 0, 0)";
     }
 
     function ensureRemarkPlaceholder(bodyTemplate) {
