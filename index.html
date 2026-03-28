@@ -7,9 +7,12 @@
   <style>
     :root {
       color-scheme: light dark;
-      --bg: #f5f7fb;
+      --bg: #f4f7fb;
+      --bg-accent: rgba(15, 123, 255, 0.12);
       --panel: rgba(255, 255, 255, 0.88);
       --panel-strong: rgba(255, 255, 255, 0.96);
+      --surface: rgba(8, 15, 26, 0.04);
+      --surface-strong: rgba(8, 15, 26, 0.08);
       --border: rgba(15, 23, 42, 0.12);
       --border-strong: rgba(15, 23, 42, 0.18);
       --text: #182033;
@@ -22,13 +25,17 @@
       --radius-lg: 24px;
       --radius-md: 18px;
       --radius-sm: 12px;
+      --control-height: 2.65rem;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #0c111b;
-        --panel: rgba(13, 18, 30, 0.82);
-        --panel-strong: rgba(15, 22, 35, 0.94);
+        --bg: #09111c;
+        --bg-accent: rgba(88, 166, 255, 0.12);
+        --panel: rgba(12, 19, 31, 0.86);
+        --panel-strong: rgba(15, 23, 37, 0.94);
+        --surface: rgba(255, 255, 255, 0.03);
+        --surface-strong: rgba(255, 255, 255, 0.06);
         --border: rgba(148, 163, 184, 0.16);
         --border-strong: rgba(148, 163, 184, 0.24);
         --text: #e6edf9;
@@ -51,8 +58,8 @@
       margin: 0;
       font-family: "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(15, 123, 255, 0.14), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(63, 185, 80, 0.1), transparent 28%),
+        radial-gradient(circle at top left, var(--bg-accent), transparent 36%),
+        radial-gradient(circle at bottom right, rgba(63, 185, 80, 0.08), transparent 26%),
         var(--bg);
       color: var(--text);
       overflow: hidden;
@@ -67,8 +74,15 @@
         linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
       background-size: 24px 24px;
-      opacity: 0.35;
+      opacity: 0.32;
       mix-blend-mode: soft-light;
+    }
+
+    button,
+    textarea,
+    select,
+    input {
+      font: inherit;
     }
 
     .app {
@@ -81,18 +95,17 @@
     }
 
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem 1.25rem;
-      backdrop-filter: blur(18px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem 1.25rem;
+      align-items: start;
+      padding: 1rem 1.25rem 1.1rem;
       background: rgba(10, 16, 27, 0.08);
+      backdrop-filter: blur(18px);
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
       position: relative;
       z-index: 10;
-      min-height: 84px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
 
     .topbar__title-group {
@@ -115,38 +128,68 @@
     }
 
     .topbar h1 {
-      margin: 0.72rem 0 0.12rem;
-      font-size: clamp(1.15rem, 1rem + 0.7vw, 1.55rem);
-      font-weight: 700;
-      line-height: 1.1;
+      margin: 0.72rem 0 0.15rem;
+      font-size: clamp(1.2rem, 1rem + 0.7vw, 1.65rem);
+      line-height: 1.05;
     }
 
     .topbar p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.93rem;
+      font-size: 0.94rem;
+      line-height: 1.5;
+      max-width: 58rem;
     }
 
-    .topbar__actions {
-      display: flex;
-      align-items: center;
+    .toolbar {
+      display: grid;
       gap: 0.75rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      flex-shrink: 0;
+      min-width: min(100%, 58rem);
     }
 
-    button,
-    textarea {
-      font: inherit;
+    .toolbar__row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      justify-content: flex-end;
+    }
+
+    .toolbar__group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      padding: 0.5rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .toolbar__status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem 0.9rem;
+      min-height: var(--control-height);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-soft);
+      white-space: nowrap;
     }
 
     .ghost-button,
-    .primary-button {
+    .primary-button,
+    .toolbar-toggle {
       appearance: none;
       border: 1px solid transparent;
       border-radius: 999px;
-      padding: 0.78rem 1rem;
+      padding: 0.75rem 1rem;
+      min-height: var(--control-height);
       font-weight: 600;
       cursor: pointer;
       transition:
@@ -157,7 +200,8 @@
         color 160ms ease;
     }
 
-    .ghost-button {
+    .ghost-button,
+    .toolbar-toggle {
       color: var(--text);
       background: var(--panel);
       border-color: var(--border);
@@ -165,7 +209,9 @@
     }
 
     .ghost-button:hover,
-    .ghost-button:focus-visible {
+    .ghost-button:focus-visible,
+    .toolbar-toggle:hover,
+    .toolbar-toggle:focus-visible {
       border-color: var(--border-strong);
       transform: translateY(-1px);
     }
@@ -173,7 +219,7 @@
     .primary-button {
       color: #ffffff;
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-      box-shadow: 0 18px 30px rgba(15, 123, 255, 0.26);
+      box-shadow: 0 18px 30px rgba(15, 123, 255, 0.24);
     }
 
     .primary-button:hover,
@@ -182,15 +228,74 @@
       box-shadow: 0 22px 34px rgba(15, 123, 255, 0.3);
     }
 
-    .primary-button:focus-visible,
+    .toolbar-toggle[aria-pressed="true"] {
+      border-color: rgba(15, 123, 255, 0.32);
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+
+    .toolbar-toggle:disabled,
+    .toolbar-control input:disabled,
+    .toolbar-control select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .ghost-button:focus-visible,
+    .primary-button:focus-visible,
+    .toolbar-toggle:focus-visible,
+    .toolbar-control select:focus-visible,
+    .toolbar-control input:focus-visible,
     .source-input:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
 
+    .toolbar-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-height: var(--control-height);
+      padding: 0.45rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(8, 15, 26, 0.03);
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1;
+    }
+
+    .toolbar-control span {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .toolbar-control select,
+    .toolbar-control input[type="number"],
+    .toolbar-control input[type="color"] {
+      height: 1.95rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-strong);
+      color: var(--text);
+      padding: 0 0.8rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .toolbar-control input[type="number"] {
+      width: 4.9rem;
+    }
+
+    .toolbar-control input[type="color"] {
+      width: 2.45rem;
+      min-width: 2.45rem;
+      padding: 0.15rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
     .workspace {
-      position: relative;
       min-height: 0;
       height: 100%;
       display: grid;
@@ -224,7 +329,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 1rem;
-      padding: 1.1rem 1.2rem 0.9rem;
+      padding: 1.05rem 1.2rem 0.9rem;
       border-bottom: 1px solid var(--border);
       background: var(--panel-strong);
       flex-shrink: 0;
@@ -241,6 +346,19 @@
       color: var(--muted);
       font-size: 0.88rem;
       line-height: 1.45;
+    }
+
+    .helper-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(15, 123, 255, 0.08);
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 0.82rem;
     }
 
     .source-panel {
@@ -266,33 +384,13 @@
       flex-direction: column;
       gap: 0.9rem;
       overflow: hidden;
-    }
-
-    .source-panel__body {
       padding: 1rem;
     }
 
     .preview-panel__body {
-      padding: 1rem;
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 32%),
         rgba(15, 23, 42, 0.025);
-    }
-
-    .source-input {
-      flex: 1 1 auto;
-      width: 100%;
-      min-height: 0;
-      height: 100%;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: rgba(10, 18, 32, 0.08);
-      color: var(--text);
-      padding: 1rem;
-      resize: none;
-      line-height: 1.55;
-      tab-size: 2;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     .helper-row {
@@ -305,16 +403,20 @@
       font-size: 0.82rem;
     }
 
-    .helper-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      padding: 0.42rem 0.66rem;
+    .source-input {
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      height: 100%;
       border: 1px solid var(--border);
-      border-radius: 999px;
-      background: rgba(15, 123, 255, 0.08);
-      color: var(--muted);
-      white-space: nowrap;
+      border-radius: var(--radius-md);
+      background: rgba(8, 15, 26, 0.05);
+      color: var(--text);
+      padding: 1rem;
+      resize: none;
+      line-height: 1.55;
+      tab-size: 2;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     .preview-stage {
@@ -337,8 +439,6 @@
       border: 0;
       border-radius: inherit;
       background: #ffffff;
-      box-shadow:
-        0 16px 40px rgba(15, 23, 42, 0.1);
     }
 
     .status {
@@ -358,20 +458,17 @@
       border: 0;
     }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1260px) {
       .topbar {
-        align-items: flex-start;
+        grid-template-columns: 1fr;
       }
 
-      .topbar__actions {
-        width: 100%;
+      .toolbar__row {
+        justify-content: flex-start;
       }
+    }
 
-      .preview-panel__body,
-      .source-panel__body {
-        padding: 0.9rem;
-      }
-
+    @media (max-width: 980px) {
       .workspace {
         grid-template-columns: 1fr;
         grid-template-rows: minmax(16rem, 38dvh) minmax(0, 1fr);
@@ -405,12 +502,76 @@
     <header class="topbar">
       <div class="topbar__title-group">
         <span class="topbar__eyebrow">Single-file visual HTML editor</span>
-        <h1>Presentation Live Editor</h1>
-        <p>Paste an existing HTML page, edit text directly in the preview, replace images, and export a clean standalone file.</p>
+        <h1>Presentation Live Editor + Page Builder</h1>
+        <p>Paste existing HTML, edit text in place, replace images, or switch to a lightweight page-builder flow with draggable text and image blocks.</p>
       </div>
-      <div class="topbar__actions">
-        <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
-        <button class="primary-button" id="exportButton" type="button">Export Page</button>
+
+      <div class="toolbar" aria-label="Editor toolbar">
+        <div class="toolbar__row">
+          <div class="toolbar__group">
+            <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
+            <button class="ghost-button" id="newPageButton" type="button">New Page</button>
+            <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
+            <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
+            <button class="primary-button" id="exportButton" type="button">Export Page</button>
+          </div>
+
+          <div class="toolbar__status" id="selectionStatus">No selection</div>
+        </div>
+
+        <div class="toolbar__row">
+          <div class="toolbar__group" id="styleControlsGroup">
+            <label class="toolbar-control">
+              <span>Font</span>
+              <select id="fontFamilyControl">
+                <option value="Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif">Aptos</option>
+                <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Trebuchet</option>
+                <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier</option>
+                <option value="inherit">Inherit</option>
+              </select>
+            </label>
+
+            <label class="toolbar-control">
+              <span>Size</span>
+              <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Weight</span>
+              <select id="fontWeightControl">
+                <option value="400">400</option>
+                <option value="500">500</option>
+                <option value="600">600</option>
+                <option value="700">700</option>
+                <option value="800">800</option>
+              </select>
+            </label>
+
+            <label class="toolbar-control">
+              <span>Text</span>
+              <input id="textColorControl" type="color" value="#14213d">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Bg</span>
+              <input id="backgroundColorControl" type="color" value="#ffffff">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Align</span>
+              <select id="textAlignControl">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+                <option value="justify">Justify</option>
+              </select>
+            </label>
+
+            <button class="toolbar-toggle" id="italicButton" type="button" aria-pressed="false">Italic</button>
+            <button class="toolbar-toggle" id="underlineButton" type="button" aria-pressed="false">Underline</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -423,11 +584,13 @@
           </div>
           <span class="helper-pill" id="sanitizationBadge">Safe preview ready</span>
         </div>
+
         <div class="source-panel__body">
           <div class="helper-row">
             <span>Changes render automatically in the editor.</span>
             <span id="sourceStats">0 characters</span>
           </div>
+
           <label class="sr-only" for="sourceInput">HTML source</label>
           <textarea class="source-input" id="sourceInput" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
         </div>
@@ -437,16 +600,18 @@
         <div class="panel__header">
           <div>
             <h2>Live Preview</h2>
-            <p>Click text to edit in place. Click any image to swap it with a local file and keep the new Base64 image in the export.</p>
+            <p>Edit pasted HTML directly, or use the page-builder tools to place new text and image elements on a blank page canvas.</p>
           </div>
           <span class="helper-pill" id="editorStatus">Ready</span>
         </div>
+
         <div class="preview-panel__body">
           <div class="helper-row">
-            <span>Preview updates from the source while keeping your in-place edits exportable.</span>
-            <span class="status" id="previewHint">Editable text and images are highlighted on hover.</span>
+            <span>Click text to edit. Drag builder items by their handle. Double-click placed images to replace them.</span>
+            <span class="status" id="previewHint">Text controls apply to the current text selection target.</span>
           </div>
-          <div class="preview-stage" id="previewStage">
+
+          <div class="preview-stage">
             <iframe
               class="preview-frame"
               id="previewFrame"
@@ -660,7 +825,7 @@
         :where([data-editor-editable="true"]) {
           outline: 1px dashed transparent;
           outline-offset: 2px;
-          border-radius: 0.35rem;
+          border-radius: 0.45rem;
           transition: outline-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
         }
 
@@ -676,35 +841,107 @@
           background-color: transparent;
         }
 
+        :where([data-editor-selected="true"]) {
+          outline: 2px solid rgba(15, 123, 255, 0.75);
+          outline-offset: 3px;
+        }
+
+        :where([data-builder-node][data-editor-selected="true"]) {
+          box-shadow: 0 0 0 4px rgba(15, 123, 255, 0.18);
+          border-radius: 22px;
+        }
+
+        :where([data-editor-handle]) {
+          position: absolute;
+          top: -14px;
+          right: 12px;
+          z-index: 5;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 84px;
+          padding: 0.42rem 0.65rem;
+          border-radius: 999px;
+          border: 1px solid rgba(15, 123, 255, 0.3);
+          background: rgba(9, 95, 212, 0.94);
+          color: #ffffff;
+          font: 600 12px/1 "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
+          letter-spacing: 0.02em;
+          box-shadow: 0 10px 24px rgba(15, 123, 255, 0.22);
+          opacity: 0;
+          transform: translateY(4px);
+          pointer-events: none;
+          cursor: grab;
+          user-select: none;
+          transition: opacity 120ms ease, transform 120ms ease;
+        }
+
+        :where([data-builder-node]:hover > [data-editor-handle]),
+        :where([data-builder-node][data-editor-selected="true"] > [data-editor-handle]) {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+
+        :where([data-builder-node][data-editor-dragging="true"]),
+        :where([data-builder-node][data-editor-dragging="true"] *) {
+          cursor: grabbing !important;
+          user-select: none !important;
+        }
+
         :where(img[data-editor-image="true"]) {
           cursor: pointer;
           transition: box-shadow 120ms ease, transform 120ms ease, filter 120ms ease;
         }
 
         :where(img[data-editor-image="true"]:hover) {
-          box-shadow: 0 0 0 3px rgba(15, 123, 255, 0.24);
-          filter: saturate(1.05);
+          box-shadow: 0 0 0 3px rgba(15, 123, 255, 0.22);
+          filter: saturate(1.04);
         }
       </style>
     `;
 
     const appState = {
       lastDoctype: "<!DOCTYPE html>",
-      pendingImageTarget: null,
       renderTimer: null,
-      previewSyncTimer: null
+      previewSyncTimer: null,
+      selectedElement: null,
+      pendingImageTarget: null,
+      imagePickerMode: null
     };
 
     const workspace = document.getElementById("workspace");
     const sourceInput = document.getElementById("sourceInput");
     const previewFrame = document.getElementById("previewFrame");
     const toggleSourceButton = document.getElementById("toggleSourceButton");
+    const newPageButton = document.getElementById("newPageButton");
+    const addTextButton = document.getElementById("addTextButton");
+    const addImageButton = document.getElementById("addImageButton");
     const exportButton = document.getElementById("exportButton");
     const imagePicker = document.getElementById("imagePicker");
     const sanitizationBadge = document.getElementById("sanitizationBadge");
     const editorStatus = document.getElementById("editorStatus");
     const previewHint = document.getElementById("previewHint");
+    const selectionStatus = document.getElementById("selectionStatus");
     const sourceStats = document.getElementById("sourceStats");
+    const fontFamilyControl = document.getElementById("fontFamilyControl");
+    const fontSizeControl = document.getElementById("fontSizeControl");
+    const fontWeightControl = document.getElementById("fontWeightControl");
+    const textColorControl = document.getElementById("textColorControl");
+    const backgroundColorControl = document.getElementById("backgroundColorControl");
+    const textAlignControl = document.getElementById("textAlignControl");
+    const italicButton = document.getElementById("italicButton");
+    const underlineButton = document.getElementById("underlineButton");
+    const styleControls = [
+      fontFamilyControl,
+      fontSizeControl,
+      fontWeightControl,
+      textColorControl,
+      backgroundColorControl,
+      textAlignControl,
+      italicButton,
+      underlineButton
+    ];
 
     function initialize() {
       if (!sourceInput.value.trim()) {
@@ -712,8 +949,9 @@
       }
 
       updateSourceStats();
-      renderFromSource();
       bindAppEvents();
+      renderFromSource();
+      updateStyleToolbarState();
     }
 
     function bindAppEvents() {
@@ -727,14 +965,53 @@
         setSourceCollapsed(!workspace.classList.contains("is-collapsed"));
       });
 
-      exportButton.addEventListener("click", exportEditedPage);
+      newPageButton.addEventListener("click", createNewPage);
 
+      addTextButton.addEventListener("click", addTextBoxToCurrentPage);
+
+      addImageButton.addEventListener("click", () => {
+        const previewDocument = previewFrame.contentDocument;
+        ensureCurrentPage(previewDocument, true);
+        appState.imagePickerMode = "add-image";
+        appState.pendingImageTarget = null;
+        imagePicker.value = "";
+        imagePicker.click();
+      });
+
+      exportButton.addEventListener("click", exportEditedPage);
       imagePicker.addEventListener("change", handleImageSelection);
 
-      window.addEventListener("resize", () => {
-        if (window.innerWidth <= 980) {
-          toggleSourceButton.textContent = workspace.classList.contains("is-collapsed") ? "Show Source" : "Hide Source";
-        }
+      fontFamilyControl.addEventListener("change", () => {
+        applyInlineStyleToSelection("fontFamily", fontFamilyControl.value);
+      });
+
+      fontSizeControl.addEventListener("input", () => {
+        const size = Math.max(10, Number(fontSizeControl.value) || 10);
+        applyInlineStyleToSelection("fontSize", `${size}px`);
+      });
+
+      fontWeightControl.addEventListener("change", () => {
+        applyInlineStyleToSelection("fontWeight", fontWeightControl.value);
+      });
+
+      textColorControl.addEventListener("input", () => {
+        applyInlineStyleToSelection("color", textColorControl.value);
+      });
+
+      backgroundColorControl.addEventListener("input", () => {
+        applyInlineStyleToSelection("backgroundColor", backgroundColorControl.value);
+      });
+
+      textAlignControl.addEventListener("change", () => {
+        applyInlineStyleToSelection("textAlign", textAlignControl.value);
+      });
+
+      italicButton.addEventListener("click", () => {
+        toggleTextStyle("fontStyle", "italic", italicButton);
+      });
+
+      underlineButton.addEventListener("click", () => {
+        toggleTextDecoration();
       });
     }
 
@@ -745,6 +1022,7 @@
     }
 
     function renderFromSource() {
+      clearSelection(false);
       const sanitizedDocument = sanitizeHtmlDocument(sourceInput.value);
       appState.lastDoctype = sanitizedDocument.doctype;
 
@@ -755,13 +1033,12 @@
       previewFrame.onload = () => {
         decoratePreviewDocument();
         editorStatus.textContent = "Preview ready";
-        previewHint.textContent = "Text edits update the source; image clicks open a local picker.";
+        previewHint.textContent = "Use the toolbar to add builder items, or edit existing content directly in the preview.";
       };
 
       previewFrame.srcdoc = previewMarkup;
     }
 
-    // Parse the user's HTML into a document and remove executable hooks before previewing it.
     function sanitizeHtmlDocument(rawHtml) {
       const parser = new DOMParser();
       const documentNode = parser.parseFromString(rawHtml || "", "text/html");
@@ -858,11 +1135,12 @@
       }
 
       markEditableNodes(previewDocument.body);
+      decorateBuilderNodes(previewDocument.body);
       markImages(previewDocument.body);
       bindPreviewEvents(previewDocument);
+      updateStyleToolbarState();
     }
 
-    // Only turn suitable text-bearing elements into editing targets to avoid nested editing conflicts.
     function markEditableNodes(root) {
       const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
 
@@ -882,6 +1160,10 @@
     }
 
     function isEditableElement(element) {
+      if (element.matches("[data-editor-skip='true']")) {
+        return false;
+      }
+
       if (!EDITABLE_TAGS.has(element.tagName)) {
         return false;
       }
@@ -913,15 +1195,40 @@
       });
     }
 
+    function decorateBuilderNodes(root) {
+      root.querySelectorAll("[data-builder-node]").forEach((node) => {
+        ensureBuilderHandle(node);
+      });
+    }
+
+    function ensureBuilderHandle(node) {
+      if (node.querySelector(":scope > [data-editor-handle]")) {
+        return;
+      }
+
+      const handle = node.ownerDocument.createElement("div");
+      handle.setAttribute("data-editor-handle", "true");
+      handle.setAttribute("data-editor-skip", "true");
+      handle.textContent = "Move";
+      node.prepend(handle);
+    }
+
     function markImages(root) {
       root.querySelectorAll("img").forEach((image) => {
         image.setAttribute("data-editor-image", "true");
-        image.setAttribute("title", "Click to replace this image");
+
+        if (image.closest("[data-builder-node='image']")) {
+          image.setAttribute("title", "Double-click to replace this image");
+        } else {
+          image.setAttribute("title", "Click to replace this image");
+        }
       });
     }
 
     function bindPreviewEvents(previewDocument) {
       previewDocument.addEventListener("click", handlePreviewClick);
+      previewDocument.addEventListener("dblclick", handlePreviewDoubleClick);
+      previewDocument.addEventListener("pointerdown", handlePreviewPointerDown);
       previewDocument.addEventListener("input", handlePreviewMutation);
       previewDocument.addEventListener("blur", handlePreviewMutation, true);
       previewDocument.addEventListener("keydown", handlePreviewKeydown);
@@ -929,32 +1236,147 @@
     }
 
     function handlePreviewClick(event) {
-      const target = event.target && event.target.nodeType === 1
-        ? event.target
-        : event.target && event.target.parentElement;
+      const target = getEventTargetElement(event);
 
-      if (!target || typeof target.matches !== "function") {
-        return;
-      }
-
-      if (target.matches("img[data-editor-image='true']")) {
-        event.preventDefault();
-        appState.pendingImageTarget = target;
-        imagePicker.value = "";
-        imagePicker.click();
+      if (!target) {
         return;
       }
 
       const link = target.closest("a");
       if (link) {
         event.preventDefault();
-        return;
       }
 
       const button = target.closest("button");
       if (button) {
         event.preventDefault();
       }
+
+      if (target.closest("[data-editor-handle='true']")) {
+        return;
+      }
+
+      const builderNode = target.closest("[data-builder-node]");
+      if (builderNode) {
+        selectElement(builderNode);
+        return;
+      }
+
+      if (target.matches("img[data-editor-image='true']")) {
+        selectElement(target);
+        appState.imagePickerMode = "replace-image";
+        appState.pendingImageTarget = target;
+        imagePicker.value = "";
+        imagePicker.click();
+        return;
+      }
+
+      const editable = target.closest("[data-editor-editable='true']");
+      if (editable) {
+        selectElement(editable);
+        return;
+      }
+
+      clearSelection();
+    }
+
+    function handlePreviewDoubleClick(event) {
+      const target = getEventTargetElement(event);
+
+      if (!target) {
+        return;
+      }
+
+      const builderImageNode = target.closest("[data-builder-node='image']");
+      if (!builderImageNode) {
+        return;
+      }
+
+      const image = builderImageNode.querySelector("img");
+      if (!image) {
+        return;
+      }
+
+      selectElement(builderImageNode);
+      appState.imagePickerMode = "replace-image";
+      appState.pendingImageTarget = image;
+      imagePicker.value = "";
+      imagePicker.click();
+    }
+
+    function handlePreviewPointerDown(event) {
+      const target = getEventTargetElement(event);
+
+      if (!target) {
+        return;
+      }
+
+      const handle = target.closest("[data-editor-handle='true']");
+      if (!handle) {
+        return;
+      }
+
+      const node = handle.closest("[data-builder-node]");
+      if (!node) {
+        return;
+      }
+
+      startNodeDrag(node, event);
+    }
+
+    function getEventTargetElement(event) {
+      if (event.target && event.target.nodeType === 1) {
+        return event.target;
+      }
+
+      return event.target && event.target.parentElement ? event.target.parentElement : null;
+    }
+
+    function startNodeDrag(node, pointerEvent) {
+      const previewDocument = previewFrame.contentDocument;
+      const page = node.closest("[data-builder-page='true']");
+
+      if (!previewDocument || !page) {
+        return;
+      }
+
+      pointerEvent.preventDefault();
+      selectElement(node);
+
+      const nodeRect = node.getBoundingClientRect();
+      const pageRect = page.getBoundingClientRect();
+      const shiftX = pointerEvent.clientX - nodeRect.left;
+      const shiftY = pointerEvent.clientY - nodeRect.top;
+
+      node.setAttribute("data-editor-dragging", "true");
+      previewDocument.body.style.userSelect = "none";
+
+      const onMove = (moveEvent) => {
+        let left = moveEvent.clientX - pageRect.left - shiftX;
+        let top = moveEvent.clientY - pageRect.top - shiftY;
+
+        const maxLeft = Math.max(0, page.clientWidth - nodeRect.width);
+        const maxTop = Math.max(0, page.clientHeight - nodeRect.height);
+
+        left = Math.min(Math.max(0, left), maxLeft);
+        top = Math.min(Math.max(0, top), maxTop);
+
+        node.style.left = `${Math.round(left)}px`;
+        node.style.top = `${Math.round(top)}px`;
+      };
+
+      const onUp = () => {
+        node.removeAttribute("data-editor-dragging");
+        previewDocument.body.style.userSelect = "";
+        previewDocument.removeEventListener("pointermove", onMove);
+        previewDocument.removeEventListener("pointerup", onUp);
+        previewDocument.removeEventListener("pointercancel", onUp);
+        syncSourceFromPreview();
+      };
+
+      previewDocument.addEventListener("pointermove", onMove);
+      previewDocument.addEventListener("pointerup", onUp);
+      previewDocument.addEventListener("pointercancel", onUp);
     }
 
     function handlePreviewKeydown(event) {
@@ -962,7 +1384,7 @@
         const target = event.target;
         if (target && target.nodeType === 1 && target.matches("[data-editor-editable='true']")) {
           event.preventDefault();
-          previewHint.textContent = "Tab is reserved in the editor to keep focus inside the active text block.";
+          previewHint.textContent = "Tab is reserved inside the active text block so typing remains predictable.";
         }
       }
     }
@@ -972,26 +1394,382 @@
       appState.previewSyncTimer = window.setTimeout(syncSourceFromPreview, 80);
     }
 
+    function clearSelection(syncToolbar = true) {
+      if (appState.selectedElement && typeof appState.selectedElement.removeAttribute === "function") {
+        appState.selectedElement.removeAttribute("data-editor-selected");
+      }
+
+      appState.selectedElement = null;
+
+      if (syncToolbar) {
+        updateStyleToolbarState();
+      }
+    }
+
+    function selectElement(element) {
+      if (!element) {
+        clearSelection();
+        return;
+      }
+
+      if (appState.selectedElement === element) {
+        updateStyleToolbarState();
+        return;
+      }
+
+      if (appState.selectedElement) {
+        appState.selectedElement.removeAttribute("data-editor-selected");
+      }
+
+      appState.selectedElement = element;
+      appState.selectedElement.setAttribute("data-editor-selected", "true");
+      updateStyleToolbarState();
+    }
+
+    function getSelectedTextTarget() {
+      const selectedElement = appState.selectedElement;
+
+      if (!selectedElement) {
+        return null;
+      }
+
+      if (selectedElement.matches("[data-builder-node='text']")) {
+        return selectedElement.querySelector("[data-builder-content='true']");
+      }
+
+      if (selectedElement.matches("[data-editor-editable='true']")) {
+        return selectedElement;
+      }
+
+      return null;
+    }
+
+    function updateStyleToolbarState() {
+      const target = getSelectedTextTarget();
+
+      styleControls.forEach((control) => {
+        control.disabled = !target;
+      });
+
+      if (!target) {
+        italicButton.setAttribute("aria-pressed", "false");
+        underlineButton.setAttribute("aria-pressed", "false");
+
+        if (!appState.selectedElement) {
+          selectionStatus.textContent = "No selection";
+          return;
+        }
+
+        if (appState.selectedElement.matches("[data-builder-node='image']") || appState.selectedElement.matches("img")) {
+          selectionStatus.textContent = "Selected: image";
+          return;
+        }
+
+        selectionStatus.textContent = `Selected: ${appState.selectedElement.tagName.toLowerCase()}`;
+        return;
+      }
+
+      const previewWindow = previewFrame.contentWindow;
+      const computed = previewWindow.getComputedStyle(target);
+
+      fontFamilyControl.value = matchFontFamilyOption(computed.fontFamily);
+      fontSizeControl.value = parseInt(computed.fontSize, 10) || 28;
+      fontWeightControl.value = normalizeWeightOption(computed.fontWeight);
+      textColorControl.value = toHexColor(computed.color, "#14213d");
+      backgroundColorControl.value = toHexColor(computed.backgroundColor, "#ffffff");
+      textAlignControl.value = computed.textAlign || "left";
+      italicButton.setAttribute("aria-pressed", String(computed.fontStyle === "italic"));
+      underlineButton.setAttribute("aria-pressed", String((computed.textDecorationLine || "").includes("underline")));
+
+      if (appState.selectedElement.matches("[data-builder-node='text']")) {
+        selectionStatus.textContent = "Selected: text box";
+      } else {
+        selectionStatus.textContent = `Selected: ${target.tagName.toLowerCase()}`;
+      }
+    }
+
+    function matchFontFamilyOption(computedFamily) {
+      const normalized = (computedFamily || "").toLowerCase();
+      const options = Array.from(fontFamilyControl.options).map((option) => option.value);
+      const match = options.find((value) => {
+        const anchor = value.split(",")[0].replace(/['"]/g, "").trim().toLowerCase();
+        return normalized.includes(anchor);
+      });
+      return match || "inherit";
+    }
+
+    function normalizeWeightOption(weight) {
+      const numeric = parseInt(weight, 10);
+      if (!numeric) {
+        return "400";
+      }
+
+      if (numeric >= 800) {
+        return "800";
+      }
+
+      if (numeric >= 700) {
+        return "700";
+      }
+
+      if (numeric >= 600) {
+        return "600";
+      }
+
+      if (numeric >= 500) {
+        return "500";
+      }
+
+      return "400";
+    }
+
+    function applyInlineStyleToSelection(property, value) {
+      const target = getSelectedTextTarget();
+      if (!target) {
+        return;
+      }
+
+      target.style[property] = value;
+      updateStyleToolbarState();
+      syncSourceFromPreview();
+    }
+
+    function toggleTextStyle(property, activeValue, button) {
+      const target = getSelectedTextTarget();
+      if (!target) {
+        return;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(target);
+      const isActive = computed[property] === activeValue;
+      target.style[property] = isActive ? "normal" : activeValue;
+      button.setAttribute("aria-pressed", String(!isActive));
+      syncSourceFromPreview();
+      updateStyleToolbarState();
+    }
+
+    function toggleTextDecoration() {
+      const target = getSelectedTextTarget();
+      if (!target) {
+        return;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(target);
+      const hasUnderline = (computed.textDecorationLine || "").includes("underline");
+      target.style.textDecoration = hasUnderline ? "none" : "underline";
+      underlineButton.setAttribute("aria-pressed", String(!hasUnderline));
+      syncSourceFromPreview();
+      updateStyleToolbarState();
+    }
+
+    function toHexColor(colorValue, fallback) {
+      if (!colorValue || colorValue === "transparent" || colorValue === "rgba(0, 0, 0, 0)") {
+        return fallback;
+      }
+
+      const match = colorValue.match(/\d+/g);
+      if (!match || match.length < 3) {
+        return fallback;
+      }
+
+      const [r, g, b] = match.slice(0, 3).map((value) => Number(value).toString(16).padStart(2, "0"));
+      return `#${r}${g}${b}`;
+    }
+
+    function createNewPage() {
+      clearSelection(false);
+      sourceInput.value = createBlankPageDocument();
+      updateSourceStats();
+      renderFromSource();
+      editorStatus.textContent = "Created blank page";
+      previewHint.textContent = "Use Add Text or Add Image to build a new page from scratch.";
+    }
+
+    function createBlankPageDocument() {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Untitled Page</title>
+</head>
+<body style="margin:0; min-height:100vh; padding:40px 24px; background:linear-gradient(180deg, #eef3fb, #f8fbff); font-family:'Aptos', 'Segoe UI Variable', 'Segoe UI', sans-serif;">
+  <section data-builder-page="true" style="position:relative; width:min(1120px, 100%); min-height:720px; margin:0 auto; background:#ffffff; border:1px solid rgba(20, 33, 61, 0.08); border-radius:28px; box-shadow:0 28px 80px rgba(20, 33, 61, 0.14); overflow:hidden;"></section>
+</body>
+</html>`;
+    }
+
+    function ensureCurrentPage(previewDocument, createIfMissing) {
+      if (!previewDocument) {
+        return null;
+      }
+
+      if (appState.selectedElement) {
+        const selectedPage = appState.selectedElement.closest("[data-builder-page='true']");
+        if (selectedPage) {
+          return selectedPage;
+        }
+      }
+
+      const firstPage = previewDocument.querySelector("[data-builder-page='true']");
+      if (firstPage) {
+        return firstPage;
+      }
+
+      if (!createIfMissing) {
+        return null;
+      }
+
+      const page = previewDocument.createElement("section");
+      page.setAttribute("data-builder-page", "true");
+      page.style.position = "relative";
+      page.style.width = "min(1120px, 100%)";
+      page.style.minHeight = "720px";
+      page.style.margin = "40px auto";
+      page.style.background = "#ffffff";
+      page.style.border = "1px solid rgba(20, 33, 61, 0.08)";
+      page.style.borderRadius = "28px";
+      page.style.boxShadow = "0 28px 80px rgba(20, 33, 61, 0.14)";
+      page.style.overflow = "hidden";
+
+      previewDocument.body.appendChild(page);
+      syncSourceFromPreview();
+      return page;
+    }
+
+    function addTextBoxToCurrentPage() {
+      const previewDocument = previewFrame.contentDocument;
+      const page = ensureCurrentPage(previewDocument, true);
+
+      if (!previewDocument || !page) {
+        return;
+      }
+
+      const node = previewDocument.createElement("div");
+      node.setAttribute("data-builder-node", "text");
+      node.style.position = "absolute";
+      node.style.left = `${getBuilderOffset(page, 64)}px`;
+      node.style.top = `${getBuilderOffset(page, 84)}px`;
+      node.style.width = "320px";
+      node.style.minHeight = "70px";
+      node.style.margin = "0";
+
+      const content = previewDocument.createElement("div");
+      content.setAttribute("data-builder-content", "true");
+      content.textContent = "Click to edit text";
+      content.style.minHeight = "70px";
+      content.style.padding = "16px 18px";
+      content.style.borderRadius = "20px";
+      content.style.background = "rgba(255, 255, 255, 0.92)";
+      content.style.boxShadow = "0 10px 28px rgba(20, 33, 61, 0.08)";
+      content.style.color = "#14213d";
+      content.style.fontFamily = "Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif";
+      content.style.fontSize = "32px";
+      content.style.fontWeight = "600";
+      content.style.lineHeight = "1.2";
+      content.style.textAlign = "left";
+
+      node.appendChild(content);
+      ensureBuilderHandle(node);
+      page.appendChild(node);
+      markEditableNodes(node);
+      selectElement(node);
+      syncSourceFromPreview();
+      updateStyleToolbarState();
+      focusTextNodeContent(node);
+      editorStatus.textContent = "Added text box";
+      previewHint.textContent = "Type directly in the new text box, or drag it by the Move handle.";
+    }
+
+    function addImageNodeToCurrentPage(dataUrl, fileName) {
+      const previewDocument = previewFrame.contentDocument;
+      const page = ensureCurrentPage(previewDocument, true);
+
+      if (!previewDocument || !page) {
+        return;
+      }
+
+      const node = previewDocument.createElement("figure");
+      node.setAttribute("data-builder-node", "image");
+      node.style.position = "absolute";
+      node.style.left = `${getBuilderOffset(page, 80)}px`;
+      node.style.top = `${getBuilderOffset(page, 130)}px`;
+      node.style.width = "300px";
+      node.style.margin = "0";
+
+      const image = previewDocument.createElement("img");
+      image.src = dataUrl;
+      image.alt = fileName ? fileName.replace(/\.[^.]+$/, "") : "Inserted image";
+      image.style.display = "block";
+      image.style.width = "100%";
+      image.style.height = "auto";
+      image.style.borderRadius = "20px";
+      image.style.boxShadow = "0 18px 36px rgba(20, 33, 61, 0.16)";
+
+      node.appendChild(image);
+      ensureBuilderHandle(node);
+      page.appendChild(node);
+      markImages(node);
+      selectElement(node);
+      syncSourceFromPreview();
+      editorStatus.textContent = "Added image";
+      previewHint.textContent = "Drag the new image by its Move handle, or double-click it to replace it.";
+    }
+
+    function getBuilderOffset(page, baseOffset) {
+      const count = page.querySelectorAll("[data-builder-node]").length;
+      return baseOffset + (count % 6) * 22;
+    }
+
+    function focusTextNodeContent(node) {
+      const content = node.querySelector("[data-builder-content='true']");
+      if (!content) {
+        return;
+      }
+
+      content.focus();
+      const selection = previewFrame.contentWindow.getSelection();
+      const range = content.ownerDocument.createRange();
+      range.selectNodeContents(content);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
     function handleImageSelection(event) {
       const file = event.target.files && event.target.files[0];
 
-      if (!file || !appState.pendingImageTarget) {
+      if (!file) {
         return;
       }
 
       const reader = new FileReader();
       reader.onload = () => {
-        if (!(typeof reader.result === "string")) {
+        if (typeof reader.result !== "string") {
           return;
         }
 
-        appState.pendingImageTarget.setAttribute("src", reader.result);
-        appState.pendingImageTarget.removeAttribute("srcset");
-        appState.pendingImageTarget.removeAttribute("sizes");
-        syncSourceFromPreview();
-        editorStatus.textContent = "Image updated";
-        previewHint.textContent = `Embedded ${file.name} as a Base64 data URL.`;
+        if (appState.imagePickerMode === "add-image") {
+          addImageNodeToCurrentPage(reader.result, file.name);
+        } else if (appState.pendingImageTarget) {
+          appState.pendingImageTarget.setAttribute("src", reader.result);
+          appState.pendingImageTarget.removeAttribute("srcset");
+          appState.pendingImageTarget.removeAttribute("sizes");
+
+          if (appState.pendingImageTarget.closest("[data-builder-node='image']")) {
+            const wrapper = appState.pendingImageTarget.closest("[data-builder-node='image']");
+            selectElement(wrapper);
+          } else {
+            selectElement(appState.pendingImageTarget);
+          }
+
+          syncSourceFromPreview();
+          editorStatus.textContent = "Image updated";
+          previewHint.textContent = `Embedded ${file.name} as a Base64 data URL.`;
+        }
+
         appState.pendingImageTarget = null;
+        appState.imagePickerMode = null;
       };
 
       reader.readAsDataURL(file);
@@ -1005,24 +1783,34 @@
         return;
       }
 
-      const cleanHtml = serializeCleanPreviewDocument(previewDocument);
-      sourceInput.value = cleanHtml;
+      const workingHtml = serializePreviewDocument(previewDocument, false);
+      sourceInput.value = workingHtml;
       updateSourceStats();
       editorStatus.textContent = "Changes synced";
     }
 
-    // Export from the live preview DOM so in-place text edits and replaced images are preserved.
-    function serializeCleanPreviewDocument(previewDocument) {
+    function serializePreviewDocument(previewDocument, forExport) {
       const clone = previewDocument.documentElement.cloneNode(true);
-
       clone.querySelector("#editor-preview-style")?.remove();
+      clone.querySelectorAll("[data-editor-handle]").forEach((handle) => handle.remove());
 
-      clone.querySelectorAll("[data-editor-editable], [data-editor-image]").forEach((element) => {
-        element.removeAttribute("data-editor-editable");
-        element.removeAttribute("data-editor-image");
+      clone.querySelectorAll("*").forEach((element) => {
+        Array.from(element.attributes).forEach((attribute) => {
+          if (attribute.name.startsWith("data-editor-")) {
+            element.removeAttribute(attribute.name);
+          }
+
+          if (forExport && attribute.name.startsWith("data-builder-")) {
+            element.removeAttribute(attribute.name);
+          }
+        });
+
         element.removeAttribute("contenteditable");
         element.removeAttribute("spellcheck");
-        element.removeAttribute("title");
+
+        if (element.getAttribute("title") === "Click to replace this image" || element.getAttribute("title") === "Double-click to replace this image") {
+          element.removeAttribute("title");
+        }
       });
 
       return `${appState.lastDoctype}\n${clone.outerHTML}`;
@@ -1035,7 +1823,7 @@
         return;
       }
 
-      const finalHtml = serializeCleanPreviewDocument(previewDocument);
+      const finalHtml = serializePreviewDocument(previewDocument, true);
       const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
       const downloadUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
@@ -1048,7 +1836,7 @@
       URL.revokeObjectURL(downloadUrl);
 
       editorStatus.textContent = "Exported edited_presentation.html";
-      previewHint.textContent = "The downloaded file is cleaned of editor-only controls and attributes.";
+      previewHint.textContent = "The downloaded file keeps content, positions, and inline styles, without editor-only UI.";
     }
 
     function buildSanitizationLabel(stats) {
