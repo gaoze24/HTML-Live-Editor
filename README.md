@@ -18,7 +18,7 @@ Everything lives in index.html. There are no build steps, frameworks, or package
 ## Main Features
 
 - Single-file app with inline HTML, CSS, and JavaScript only
-- Compact toolbar with mode-aware actions
+- Fixed two-row toolbar with mode-aware actions
 - Collapsible source panel
 - Multi-page/page-selector workflow
 - Dedicated remark slideshow mode
@@ -32,6 +32,16 @@ Everything lives in index.html. There are no build steps, frameworks, or package
 - Delete pages in normal HTML mode
 - Delete slides in remark mode
 - Clean export without editor-only UI attributes
+- Stable workspace position with contextual controls contained in the second toolbar row
+
+## Toolbar Layout
+
+The top toolbar uses a constant two-row layout so the workspace below does not jump when selection-specific controls appear.
+
+- Row 1 contains primary document actions such as source toggle, import, new document/deck, new page/slide, add text, add image, export, and the current mode badge.
+- Row 2 contains contextual controls such as page/slide selection, delete actions, remark slide class metadata, presenter view, and text or image styling controls for the current selection.
+- When contextual controls are not relevant, the second row stays in place instead of collapsing into a different header height.
+- If a row becomes crowded, controls stay in the same row and can scroll horizontally rather than forcing a third row.
 
 ## Remark Slideshow Support
 
@@ -116,6 +126,7 @@ Supported remark workflow:
 - In remark mode, source changes re-parse the slide deck.
 - Visual edits in the preview sync back into the source model.
 - In remark mode, the editor uses a lightweight internal renderer for useful slide editing rather than depending on the full remark runtime for previewing.
+- Toolbar height stays consistent across no selection, text selection, image selection, normal HTML mode, and remark slideshow mode.
 
 ## Safety Notes
 
