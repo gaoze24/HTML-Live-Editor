@@ -151,6 +151,10 @@
       display: none;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     #pageControlsGroup {
       flex: 1 1 24rem;
       min-width: min(100%, 16rem);
@@ -309,15 +313,15 @@
       min-height: 0;
       height: 100%;
       display: grid;
-      grid-template-columns: minmax(20rem, 34rem) minmax(0, 1fr);
-      gap: 0.75rem;
+      grid-template-columns: minmax(18rem, var(--source-pane-size, 30rem)) 0.7rem minmax(0, 1fr);
+      gap: 0.4rem;
       padding: 0.75rem;
       transition: grid-template-columns 220ms ease;
       overflow: hidden;
     }
 
     .workspace.is-collapsed {
-      grid-template-columns: 0 minmax(0, 1fr);
+      grid-template-columns: 0 0 minmax(0, 1fr);
     }
 
     .panel {
@@ -356,6 +360,11 @@
       color: var(--muted);
       font-size: 0.8rem;
       line-height: 1.35;
+    }
+
+    .panel__header p[hidden],
+    .helper-row[hidden] {
+      display: none;
     }
 
     .helper-pill {
@@ -401,6 +410,65 @@
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 32%),
         rgba(15, 23, 42, 0.025);
+    }
+
+    .preview-split {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      gap: 0.4rem;
+    }
+
+    .preview-split.is-notes-visible {
+      grid-template-rows: minmax(14rem, 1fr) 0.7rem minmax(10rem, var(--presenter-notes-size, 14rem));
+    }
+
+    .pane-divider {
+      position: relative;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      cursor: col-resize;
+      min-width: 0;
+      min-height: 0;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .pane-divider::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(15, 123, 255, 0.16), rgba(15, 123, 255, 0.08));
+      border: 1px solid rgba(15, 123, 255, 0.16);
+      transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+    }
+
+    .pane-divider:hover::before,
+    .pane-divider:focus-visible::before,
+    .pane-divider.is-dragging::before {
+      background: linear-gradient(180deg, rgba(15, 123, 255, 0.28), rgba(15, 123, 255, 0.16));
+      border-color: rgba(15, 123, 255, 0.28);
+      transform: scale(1.02);
+    }
+
+    .pane-divider--horizontal {
+      cursor: row-resize;
+    }
+
+    .workspace.is-collapsed #workspaceResizeHandle {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .presenter-notes-panel {
+      min-height: 0;
+    }
+
+    .presenter-notes-panel .source-panel__body {
+      padding-top: 0.65rem;
     }
 
     .helper-row {
@@ -499,6 +567,11 @@
         grid-template-rows: minmax(0, 1fr);
       }
 
+      #workspaceResizeHandle,
+      #notesResizeHandle {
+        display: none;
+      }
+
       .workspace.is-collapsed .preview-panel {
         grid-row: 1;
       }
@@ -513,6 +586,10 @@
 
       .workspace.is-collapsed .source-panel {
         display: none;
+      }
+
+      .preview-split.is-notes-visible {
+        grid-template-rows: minmax(12rem, 1fr) minmax(10rem, auto);
       }
     }
   </style>
@@ -555,6 +632,10 @@
             <span>Class</span>
             <input id="slideClassControl" type="text" placeholder="middle, center" spellcheck="false">
           </label>
+        </div>
+
+        <div class="toolbar__group" id="presenterViewGroup" hidden>
+          <button class="toolbar-toggle" id="presenterViewButton" type="button" aria-pressed="false">Presenter View</button>
         </div>
 
         <div class="toolbar__group" id="textControlsGroup">
@@ -684,6 +765,8 @@
         </div>
       </section>
 
+      <button class="pane-divider pane-divider--vertical" id="workspaceResizeHandle" type="button" aria-label="Resize source and preview panels" title="Drag to resize source and preview panels"></button>
+
       <section class="panel preview-panel">
         <div class="panel__header">
           <div>
@@ -695,17 +778,33 @@
 
         <div class="preview-panel__body">
           <div class="helper-row">
-            <span>Click to select, drag with the overlay Move handle, and double-click images to replace them.</span>
             <span class="status" id="previewHint">Text controls appear for text elements. Image controls appear for images.</span>
           </div>
 
-          <div class="preview-stage">
-            <iframe
-              class="preview-frame"
-              id="previewFrame"
-              title="Editable HTML preview"
-              sandbox="allow-same-origin"
-            ></iframe>
+          <div class="preview-split" id="previewSplit">
+            <div class="preview-stage">
+              <iframe
+                class="preview-frame"
+                id="previewFrame"
+                title="Editable HTML preview"
+                sandbox="allow-same-origin"
+              ></iframe>
+            </div>
+
+            <button class="pane-divider pane-divider--horizontal" id="notesResizeHandle" type="button" aria-label="Resize slide preview and presenter notes" title="Drag to resize slide preview and presenter notes" hidden></button>
+
+            <section class="panel presenter-notes-panel" id="presenterNotesPanel" hidden>
+              <div class="panel__header">
+                <div>
+                  <h2>Presenter Notes</h2>
+                </div>
+                <span class="helper-pill" id="presenterNotesStatus">Notes hidden</span>
+              </div>
+              <div class="source-panel__body">
+                <label class="sr-only" for="presenterNotesInput">Presenter notes</label>
+                <textarea class="source-input" id="presenterNotesInput" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="No presenter notes for this slide."></textarea>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -916,6 +1015,24 @@ Edit the slide source on the left, or add text and images directly in the previe
       "CODE"
     ]);
 
+    const REMARK_INLINE_HTML_TAGS = new Set([
+      "A",
+      "B",
+      "BR",
+      "CODE",
+      "DEL",
+      "EM",
+      "I",
+      "IMG",
+      "MARK",
+      "SMALL",
+      "SPAN",
+      "STRONG",
+      "SUB",
+      "SUP",
+      "U"
+    ]);
+
     const STRUCTURAL_DESCENDANTS = [
       "ARTICLE",
       "ASIDE",
@@ -954,6 +1071,22 @@ Edit the slide source on the left, or add text and images directly in the previe
 
     const PAGE_HINT_PATTERN = /(?:^|[\s_-])(page|slide|canvas|sheet|artboard|screen)(?:$|[\s_-])/i;
     const REMARK_DIRECTIVE_PATTERN = /^([A-Za-z0-9_-]+):(.*)$/;
+    const REMARK_SLIDE_DIRECTIVES = new Set([
+      "class",
+      "name",
+      "layout",
+      "template",
+      "background-image",
+      "background-size",
+      "background-position",
+      "background-color",
+      "background",
+      "count",
+      "exclude",
+      "continued",
+      "notes",
+      "title"
+    ]);
 
     const IMAGE_FILTER_PRESETS = {
       none: "none",
@@ -1273,6 +1406,34 @@ Edit the slide source on the left, or add text and images directly in the previe
           display: block;
         }
 
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] [data-remark-class-wrapper="true"] {
+          display: block;
+          width: 100%;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .small,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .smaller {
+          font-size: 0.82em;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .tiny {
+          font-size: 0.68em;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .large {
+          font-size: 1.18em;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .muted {
+          opacity: 0.72;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] .footnote {
+          margin-top: auto;
+          font-size: 0.78em;
+          opacity: 0.76;
+        }
+
         html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] [data-remark-empty="true"] {
           color: rgba(19, 32, 58, 0.5);
           font-style: italic;
@@ -1294,10 +1455,21 @@ Edit the slide source on the left, or add text and images directly in the previe
       exportFileName: "edited_presentation.html",
       isUpdatingSourceInternally: false,
       pendingSelection: null,
-      documentModel: null
+      documentModel: null,
+      presenterView: false,
+      isUpdatingNotesInternally: false,
+      sourcePaneSize: 480,
+      notesPaneSize: 224
+    };
+
+    const STORAGE_KEYS = {
+      sourcePaneSize: "html-live-editor:source-pane-size",
+      notesPaneSize: "html-live-editor:notes-pane-size",
+      presenterView: "html-live-editor:presenter-view"
     };
 
     const workspace = document.getElementById("workspace");
+    const workspaceResizeHandle = document.getElementById("workspaceResizeHandle");
     const sourceInput = document.getElementById("sourceInput");
     const previewFrame = document.getElementById("previewFrame");
     const toggleSourceButton = document.getElementById("toggleSourceButton");
@@ -1319,10 +1491,17 @@ Edit the slide source on the left, or add text and images directly in the previe
     const modeBadge = document.getElementById("modeBadge");
     const deleteElementButton = document.getElementById("deleteElementButton");
     const deletePageButton = document.getElementById("deletePageButton");
+    const presenterViewGroup = document.getElementById("presenterViewGroup");
+    const presenterViewButton = document.getElementById("presenterViewButton");
     const sourcePanelTitle = document.getElementById("sourcePanelTitle");
     const sourcePanelDescription = document.getElementById("sourcePanelDescription");
     const sourceContextHint = document.getElementById("sourceContextHint");
     const previewPanelDescription = document.getElementById("previewPanelDescription");
+    const previewSplit = document.getElementById("previewSplit");
+    const notesResizeHandle = document.getElementById("notesResizeHandle");
+    const presenterNotesPanel = document.getElementById("presenterNotesPanel");
+    const presenterNotesInput = document.getElementById("presenterNotesInput");
+    const presenterNotesStatus = document.getElementById("presenterNotesStatus");
     const remarkMetaGroup = document.getElementById("remarkMetaGroup");
     const slideClassControl = document.getElementById("slideClassControl");
     const textControlsGroup = document.getElementById("textControlsGroup");
@@ -1367,11 +1546,16 @@ Edit the slide source on the left, or add text and images directly in the previe
     ];
 
     function initialize() {
+      restoreWorkspacePreferences();
       bindAppEvents();
+      bindResizeHandles();
+      applyWorkspacePreferences();
       loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
     }
 
     function bindAppEvents() {
+      window.addEventListener("resize", handleWindowResize);
+
       sourceInput.addEventListener("input", () => {
         updateSourceStats();
         if (appState.isUpdatingSourceInternally) {
@@ -1453,7 +1637,9 @@ Edit the slide source on the left, or add text and images directly in the previe
 
       deleteElementButton.addEventListener("click", deleteSelectedElement);
       deletePageButton.addEventListener("click", deleteCurrentPage);
+      presenterViewButton.addEventListener("click", togglePresenterView);
       slideClassControl.addEventListener("input", handleSlideClassInput);
+      presenterNotesInput.addEventListener("input", handlePresenterNotesInput);
       document.addEventListener("keydown", handleAppKeydown, true);
 
       fontFamilyControl.addEventListener("change", () => {
@@ -1527,6 +1713,134 @@ Edit the slide source on the left, or add text and images directly in the previe
         const preset = IMAGE_FILTER_PRESETS[imageFilterControl.value] || "none";
         applyImageStyle("filter", preset);
       });
+    }
+
+    function bindResizeHandles() {
+      bindPaneResize(workspaceResizeHandle, {
+        axis: "x",
+        getContainer: () => workspace,
+        isEnabled: () => !workspace.classList.contains("is-collapsed") && window.innerWidth > 980,
+        getValue: () => appState.sourcePaneSize,
+        getBounds: (rect) => ({
+          min: 320,
+          max: Math.max(420, rect.width - 360)
+        }),
+        project: (event, rect) => event.clientX - rect.left,
+        apply: (value) => {
+          appState.sourcePaneSize = Math.round(value);
+          applyWorkspacePreferences();
+          persistWorkspacePreference(STORAGE_KEYS.sourcePaneSize, appState.sourcePaneSize);
+        }
+      });
+
+      bindPaneResize(notesResizeHandle, {
+        axis: "y",
+        getContainer: () => previewSplit,
+        isEnabled: () => isRemarkMode() && appState.presenterView && window.innerWidth > 980,
+        getValue: () => appState.notesPaneSize,
+        getBounds: (rect) => ({
+          min: 160,
+          max: Math.max(220, rect.height - 220)
+        }),
+        project: (event, rect) => rect.bottom - event.clientY,
+        apply: (value) => {
+          appState.notesPaneSize = Math.round(value);
+          applyWorkspacePreferences();
+          persistWorkspacePreference(STORAGE_KEYS.notesPaneSize, appState.notesPaneSize);
+        }
+      });
+    }
+
+    function bindPaneResize(handle, options) {
+      handle.addEventListener("pointerdown", (event) => {
+        if (!options.isEnabled()) {
+          return;
+        }
+
+        const container = options.getContainer();
+        if (!container) {
+          return;
+        }
+
+        event.preventDefault();
+        const rect = container.getBoundingClientRect();
+        const bounds = options.getBounds(rect);
+        handle.classList.add("is-dragging");
+        document.body.style.userSelect = "none";
+        handle.setPointerCapture?.(event.pointerId);
+
+        const onMove = (moveEvent) => {
+          const projected = options.project(moveEvent, rect);
+          const clamped = clamp(projected, bounds.min, bounds.max);
+          options.apply(clamped);
+        };
+
+        const onUp = () => {
+          handle.classList.remove("is-dragging");
+          document.body.style.userSelect = "";
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+        };
+
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+      });
+    }
+
+    function restoreWorkspacePreferences() {
+      appState.sourcePaneSize = readNumberPreference(STORAGE_KEYS.sourcePaneSize, 480);
+      appState.notesPaneSize = readNumberPreference(STORAGE_KEYS.notesPaneSize, 224);
+      appState.presenterView = readBooleanPreference(STORAGE_KEYS.presenterView, false);
+    }
+
+    function applyWorkspacePreferences() {
+      const workspaceRect = workspace.getBoundingClientRect();
+      const previewSplitRect = previewSplit.getBoundingClientRect();
+      const maxSourcePaneSize = workspaceRect.width > 0 ? Math.max(420, workspaceRect.width - 360) : appState.sourcePaneSize;
+      const maxNotesPaneSize = previewSplitRect.height > 0 ? Math.max(220, previewSplitRect.height - 220) : appState.notesPaneSize;
+      const sourcePaneSize = clamp(appState.sourcePaneSize, 320, maxSourcePaneSize);
+      const notesPaneSize = clamp(appState.notesPaneSize, 160, maxNotesPaneSize);
+
+      workspace.style.setProperty("--source-pane-size", `${Math.round(sourcePaneSize)}px`);
+      previewSplit.style.setProperty("--presenter-notes-size", `${Math.round(notesPaneSize)}px`);
+    }
+
+    function handleWindowResize() {
+      applyWorkspacePreferences();
+      updatePresenterViewUi();
+      scheduleOverlayRefresh();
+    }
+
+    function persistWorkspacePreference(key, value) {
+      try {
+        localStorage.setItem(key, String(value));
+      } catch (error) {
+        // Ignore storage failures and keep session-only state.
+      }
+    }
+
+    function readNumberPreference(key, fallback) {
+      try {
+        const value = Number(localStorage.getItem(key));
+        return Number.isFinite(value) && value > 0 ? value : fallback;
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function readBooleanPreference(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        if (value === null) {
+          return fallback;
+        }
+
+        return value === "true";
+      } catch (error) {
+        return fallback;
+      }
     }
 
     function confirmResetDocument(message) {
@@ -1634,23 +1948,33 @@ Edit the slide source on the left, or add text and images directly in the previe
 
     function updateModeUi() {
       const inRemarkMode = isRemarkMode();
+      if (!inRemarkMode && appState.presenterView) {
+        appState.presenterView = false;
+        persistWorkspacePreference(STORAGE_KEYS.presenterView, false);
+      }
+
       modeBadge.textContent = inRemarkMode ? "Mode: Remark Slideshow" : "Mode: Normal HTML";
       pageSelectLabel.textContent = inRemarkMode ? "Slide" : "Page";
       newPageButton.textContent = inRemarkMode ? "New Slide" : "New Page";
       exportButton.textContent = inRemarkMode ? "Export Deck" : "Export HTML";
       remarkMetaGroup.hidden = !inRemarkMode;
+      presenterViewGroup.hidden = !inRemarkMode;
 
       if (inRemarkMode) {
         sourcePanelTitle.textContent = "Remark Slide Source";
         sourcePanelDescription.textContent = "Edit the textarea-backed remark deck source directly. Slides stay separated by --- and export returns to a compatible wrapper HTML file.";
         sourceContextHint.textContent = "Slide metadata lines like class:, name:, and layout: are preserved and round-trip back into <textarea id=\"source\">.";
-        previewPanelDescription.textContent = "Slides render as editable pages. Select visible content to style it, drag builder elements, and keep the underlying remark source in sync.";
+        previewPanelDescription.textContent = "";
+        previewPanelDescription.hidden = true;
       } else {
         sourcePanelTitle.textContent = "Source HTML";
         sourcePanelDescription.textContent = "Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.";
         sourceContextHint.textContent = "Rendered preview stays editable, movable, and exportable.";
         previewPanelDescription.textContent = "Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.";
+        previewPanelDescription.hidden = false;
       }
+
+      updatePresenterViewUi();
     }
 
     function handleHtmlImport(event) {
@@ -1672,7 +1996,7 @@ Edit the slide source on the left, or add text and images directly in the previe
         if (detectRemarkHtml(reader.result)) {
           loadRemarkDocumentFromHtml(reader.result, { fileName: file.name || "remark_deck.html" });
           editorStatus.textContent = `Imported ${file.name} in remark mode`;
-          previewHint.textContent = "The file was detected as a remark slideshow. Each slide now appears as an editor page and exports back into the same wrapper style.";
+          previewHint.textContent = "";
         } else {
           loadNormalDocument(reader.result, { fileName: file.name || "edited_presentation.html" });
           editorStatus.textContent = `Imported ${file.name}`;
@@ -2447,6 +2771,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       updatePagePicker(previewDocument);
       updateToolbarState();
+      updatePresenterViewUi();
 
       if (options.scroll) {
         page.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2833,6 +3158,64 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       slideClassControl.value = slide ? getSlideDirectiveValue(slide, "class") : "";
     }
 
+    function togglePresenterView() {
+      if (!isRemarkMode()) {
+        return;
+      }
+
+      appState.presenterView = !appState.presenterView;
+      persistWorkspacePreference(STORAGE_KEYS.presenterView, appState.presenterView);
+      updatePresenterViewUi();
+    }
+
+    function updatePresenterViewUi() {
+      const isRelevant = isRemarkMode();
+      const isVisible = isRelevant && appState.presenterView;
+      presenterViewButton.setAttribute("aria-pressed", String(isVisible));
+      presenterViewButton.textContent = "Presenter View";
+      presenterViewButton.disabled = !isRelevant;
+      presenterNotesPanel.hidden = !isVisible;
+      presenterNotesPanel.setAttribute("aria-hidden", String(!isVisible));
+      notesResizeHandle.hidden = !isVisible || window.innerWidth <= 980;
+      previewSplit.classList.toggle("is-notes-visible", isVisible);
+
+      if (!isVisible) {
+        setPresenterNotesValue("");
+        presenterNotesStatus.textContent = "Notes hidden";
+        presenterNotesInput.disabled = true;
+        return;
+      }
+
+      const slide = getCurrentRemarkSlide();
+      const notes = slide?.notesSource || "";
+      setPresenterNotesValue(notes);
+      presenterNotesInput.disabled = !slide;
+      presenterNotesStatus.textContent = notes ? "Notes visible" : "No notes yet";
+    }
+
+    function setPresenterNotesValue(value) {
+      appState.isUpdatingNotesInternally = true;
+      presenterNotesInput.value = value;
+      appState.isUpdatingNotesInternally = false;
+    }
+
+    function handlePresenterNotesInput() {
+      if (appState.isUpdatingNotesInternally || !isRemarkMode()) {
+        return;
+      }
+
+      const slide = getCurrentRemarkSlide();
+      if (!slide) {
+        return;
+      }
+
+      slide.notesSource = presenterNotesInput.value;
+      setSourceValue(buildRemarkDeckSource(appState.documentModel));
+      presenterNotesStatus.textContent = slide.notesSource.trim() ? "Notes visible" : "No notes yet";
+      editorStatus.textContent = "Presenter notes updated";
+      previewHint.textContent = "Presenter notes stay hidden from the audience preview and are preserved in export.";
+    }
+
     function matchFontFamilyOption(computedFamily) {
       const normalized = (computedFamily || "").toLowerCase();
       const options = Array.from(fontFamilyControl.options).map((option) => option.value);
@@ -2999,7 +3382,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function createNewRemarkSlide() {
       const slide = createRemarkSlide({
         directives: [createRemarkDirective("class", "middle, center")],
-        bodySource: "# New Slide\n\nYour content here"
+        bodySource: "# New Slide\n\nYour content here",
+        notesSource: ""
       });
 
       appState.documentModel.slides.push(slide);
@@ -3282,7 +3666,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return slide;
       });
 
-      appState.documentModel.slides = nextSlides.length ? nextSlides : [createRemarkSlide({ bodySource: "" })];
+      appState.documentModel.slides = nextSlides.length ? nextSlides : [createRemarkSlide({ bodySource: "", notesSource: "" })];
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       editorStatus.textContent = "Slide source synced";
       updateRemarkMetadataControls();
@@ -3672,7 +4056,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const normalized = String(source || "").replace(/\r\n?/g, "\n");
       const parts = normalized.split(/^\s*---\s*$/m);
       const slides = parts.map((part) => parseRemarkSlide(part)).filter(Boolean);
-      return slides.length ? slides : [createRemarkSlide({ bodySource: "" })];
+      return slides.length ? slides : [createRemarkSlide({ bodySource: "", notesSource: "" })];
     }
 
     function parseRemarkSlide(block) {
@@ -3681,18 +4065,40 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const directives = [];
       let index = 0;
 
-      while (index < lines.length && REMARK_DIRECTIVE_PATTERN.test(lines[index])) {
+      while (index < lines.length && !lines[index].trim()) {
+        index += 1;
+      }
+
+      while (index < lines.length && isRemarkDirectiveLine(lines[index])) {
         const match = lines[index].match(REMARK_DIRECTIVE_PATTERN);
         directives.push(createRemarkDirective(match[1], match[2].replace(/^\s*/, ""), lines[index]));
         index += 1;
       }
 
-      const bodyLines = lines.slice(index);
+      const contentLines = lines.slice(index);
+      const notesIndex = contentLines.findIndex((line) => isRemarkNotesSeparator(line));
+      const bodyLines = notesIndex >= 0 ? contentLines.slice(0, notesIndex) : contentLines;
+      const notesLines = notesIndex >= 0 ? contentLines.slice(notesIndex + 1) : [];
       const bodySource = trimSurroundingBlankLines(bodyLines.join("\n"));
+      const notesSource = trimSurroundingBlankLines(notesLines.join("\n"));
       return createRemarkSlide({
         directives,
-        bodySource
+        bodySource,
+        notesSource
       });
+    }
+
+    function isRemarkDirectiveLine(line) {
+      const match = String(line || "").match(REMARK_DIRECTIVE_PATTERN);
+      if (!match) {
+        return false;
+      }
+
+      return REMARK_SLIDE_DIRECTIVES.has(match[1].toLowerCase());
+    }
+
+    function isRemarkNotesSeparator(line) {
+      return /^\s*\?\?\?\s*$/.test(String(line || ""));
     }
 
     function trimSurroundingBlankLines(value) {
@@ -3704,7 +4110,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       return {
         id: options.id || `remark-slide-${appState.remarkSlideCounter}`,
         directives: Array.isArray(options.directives) ? options.directives.map(normalizeRemarkDirective) : [],
-        bodySource: options.bodySource || ""
+        bodySource: options.bodySource || "",
+        notesSource: options.notesSource || ""
       };
     }
 
@@ -3746,16 +4153,22 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function buildRemarkSlideSource(slide) {
       const metadataLines = slide.directives.map(serializeRemarkDirective).filter(Boolean);
       const body = trimSurroundingBlankLines(slide.bodySource || "");
-
-      if (metadataLines.length && body) {
-        return `${metadataLines.join("\n")}\n\n${body}`;
-      }
+      const notes = trimSurroundingBlankLines(slide.notesSource || "");
+      const parts = [];
 
       if (metadataLines.length) {
-        return metadataLines.join("\n");
+        parts.push(metadataLines.join("\n"));
       }
 
-      return body;
+      if (body) {
+        parts.push(body);
+      }
+
+      if (notes) {
+        parts.push(`???\n${notes}`);
+      }
+
+      return parts.join("\n\n");
     }
 
     function serializeRemarkDirective(directive) {
@@ -3860,6 +4273,18 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           continue;
         }
 
+        const classWrapper = parseRemarkClassWrapper(lines, index);
+        if (classWrapper) {
+          const innerMarkup = renderRemarkSlideBody(classWrapper.content);
+          blocks.push(
+            `<div class="${escapeHtmlAttribute(classWrapper.classNames.join(" "))}" data-remark-class-wrapper="true" data-remark-class-source="${escapeHtmlAttribute(classWrapper.classNames.join(" "))}">` +
+            `${innerMarkup || '<p data-remark-block="paragraph" data-remark-empty="true">Empty block</p>'}` +
+            `</div>`
+          );
+          index = classWrapper.nextIndex;
+          continue;
+        }
+
         if (/^```/.test(line.trim())) {
           const language = line.trim().slice(3).trim();
           const codeLines = [];
@@ -3928,20 +4353,113 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function renderInlineMarkup(text) {
-      let markup = String(text || "");
+      const rawText = String(text || "");
+      const tokens = [];
+      const stash = (value) => {
+        const token = `REMARKTOK${tokens.length}XPLACEHOLDER`;
+        tokens.push({ token, value });
+        return token;
+      };
+
+      let markup = rawText;
+
+      markup = markup.replace(/&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/g, (entity) => {
+        return stash(entity);
+      });
+
+      markup = markup.replace(/<\/?(?:br|code|img|span|em|strong|a|b|i|u|small|mark|sup|sub|del)(?:\s[^<>]*?)?>/gi, (tag) => {
+        return stash(sanitizeHtmlFragment(tag).html);
+      });
+
       markup = markup.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
-        return `<img alt="${escapeHtmlAttribute(alt)}" src="${escapeHtmlAttribute(src)}">`;
+        return stash(`<img alt="${escapeHtmlAttribute(decodeRemarkInlineText(alt))}" src="${escapeHtmlAttribute(decodeRemarkInlineText(src))}">`);
       });
 
       markup = markup.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
-        return `<a href="${escapeHtmlAttribute(href)}">${escapeHtml(label)}</a>`;
+        return stash(`<a href="${escapeHtmlAttribute(decodeRemarkInlineText(href))}">${escapeHtml(decodeRemarkInlineText(label))}</a>`);
       });
 
       markup = markup.replace(/`([^`]+)`/g, (_, code) => {
-        return `<code>${escapeHtml(code)}</code>`;
+        return stash(`<code>${escapeHtml(decodeRemarkInlineText(code))}</code>`);
+      });
+
+      markup = markup.replace(/\.([A-Za-z0-9_-]+)\[([^\]]+)\]/g, (_, className, content) => {
+        return stash(`<span class="${escapeHtmlAttribute(className)}" data-remark-inline-class="${escapeHtmlAttribute(className)}">${renderInlineMarkup(decodeRemarkInlineText(content))}</span>`);
+      });
+
+      markup = escapeHtml(markup);
+      markup = markup.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      markup = markup.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+      markup = markup.replace(/(^|[\s(])\*([^*]+)\*(?=$|[\s).,!?:;])/g, "$1<em>$2</em>");
+      markup = markup.replace(/(^|[\s(])_([^_]+)_(?=$|[\s).,!?:;])/g, "$1<em>$2</em>");
+      markup = markup.replace(/(^|[\s(])~~([^~]+)~~(?=$|[\s).,!?:;])/g, "$1<del>$2</del>");
+
+      tokens.forEach(({ token, value }) => {
+        markup = markup.replaceAll(token, value);
       });
 
       return sanitizeHtmlFragment(markup).html;
+    }
+
+    function decodeRemarkInlineText(value) {
+      return String(value || "")
+        .replace(/\\\]/g, "]")
+        .replace(/\\\[/g, "[")
+        .replace(/\\\\/g, "\\");
+    }
+
+    function parseRemarkClassWrapper(lines, startIndex) {
+      const firstLine = lines[startIndex] || "";
+      const match = firstLine.match(/^\s*\.([A-Za-z0-9_.\-\s]+)\[\s*$/);
+      if (!match) {
+        return null;
+      }
+
+      const rawClasses = match[1]
+        .split(".")
+        .flatMap((part) => part.split(/\s+/))
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+      if (!rawClasses.length) {
+        return null;
+      }
+
+      const collected = [];
+      let depth = 1;
+      let index = startIndex + 1;
+
+      while (index < lines.length) {
+        const line = lines[index];
+        const trimmed = line.trim();
+
+        if (/^\s*\.([A-Za-z0-9_.\-\s]+)\[\s*$/.test(line)) {
+          depth += 1;
+          collected.push(line);
+          index += 1;
+          continue;
+        }
+
+        if (trimmed === "]") {
+          depth -= 1;
+          if (depth === 0) {
+            return {
+              classNames: rawClasses,
+              content: trimSurroundingBlankLines(collected.join("\n")),
+              nextIndex: index + 1
+            };
+          }
+
+          collected.push(line);
+          index += 1;
+          continue;
+        }
+
+        collected.push(line);
+        index += 1;
+      }
+
+      return null;
     }
 
     function serializeRemarkSlideBody(page) {
@@ -3979,9 +4497,13 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return cleaned.outerHTML;
       }
 
-      if (/^H[1-3]$/.test(tagName) && canSerializeSimpleTextBlock(cleaned)) {
+      if (cleaned.hasAttribute("data-remark-class-wrapper")) {
+        return serializeRemarkClassWrapper(cleaned);
+      }
+
+      if (/^H[1-3]$/.test(tagName) && canSerializeRemarkInlineBlock(cleaned)) {
         const level = Number(tagName.slice(1));
-        return `${"#".repeat(level)} ${serializePlainTextWithBreaks(cleaned).replace(/\n/g, " ").trim()}`;
+        return `${"#".repeat(level)} ${serializeRemarkInlineChildren(cleaned).trim()}`;
       }
 
       if (tagName === "P") {
@@ -3990,8 +4512,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           return `![${image.getAttribute("alt") || ""}](${image.getAttribute("src") || ""})`;
         }
 
-        if (canSerializeSimpleTextBlock(cleaned)) {
-          return serializePlainTextWithBreaks(cleaned);
+        if (canSerializeRemarkInlineBlock(cleaned)) {
+          return serializeRemarkInlineChildren(cleaned);
         }
 
         return cleaned.outerHTML;
@@ -4000,7 +4522,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       if ((tagName === "UL" || tagName === "OL") && canSerializeSimpleList(cleaned)) {
         return Array.from(cleaned.children).map((item, index) => {
           const prefix = tagName === "OL" ? `${index + 1}.` : "-";
-          return `${prefix} ${serializePlainTextWithBreaks(item).replace(/\n/g, " ").trim()}`;
+          return `${prefix} ${serializeRemarkInlineChildren(item).replace(/\n/g, " ").trim()}`;
         }).join("\n");
       }
 
@@ -4014,6 +4536,25 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       return cleaned.outerHTML;
+    }
+
+    function serializeRemarkClassWrapper(element) {
+      const sourceClasses = (element.getAttribute("data-remark-class-source") || element.className || "")
+        .split(/\s+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+      const classToken = sourceClasses.join(".");
+      const innerParts = [];
+      Array.from(element.childNodes).forEach((child) => {
+        const serialized = serializeRemarkSlideNode(child);
+        if (serialized) {
+          innerParts.push(serialized);
+        }
+      });
+
+      const innerSource = trimSurroundingBlankLines(innerParts.join("\n\n"));
+      return classToken ? `.${classToken}[\n${innerSource}\n]` : innerSource;
     }
 
     function cloneForRemarkSource(element) {
@@ -4037,6 +4578,64 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       return clone;
     }
 
+    function canSerializeRemarkInlineBlock(element) {
+      if (hasNonTrivialAttributes(element)) {
+        return false;
+      }
+
+      return Array.from(element.childNodes).every((child) => canSerializeRemarkInlineNode(child));
+    }
+
+    function canSerializeRemarkInlineNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return true;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+
+      if (!REMARK_INLINE_HTML_TAGS.has(node.tagName)) {
+        return false;
+      }
+
+      if (node.tagName === "IMG") {
+        return canSerializeSimpleStandaloneImage(node);
+      }
+
+      if (node.tagName === "A") {
+        return !hasNonTrivialAttributes(node, ["href", "title"]) &&
+          Array.from(node.childNodes).every((child) => canSerializeRemarkInlineNode(child));
+      }
+
+      if (node.tagName === "BR") {
+        return !hasNonTrivialAttributes(node);
+      }
+
+      if (node.tagName === "SPAN" && !node.getAttribute("data-remark-inline-class")) {
+        return false;
+      }
+
+      return !hasNonTrivialAttributes(node, getAllowedRemarkInlineAttributes(node)) &&
+        Array.from(node.childNodes).every((child) => canSerializeRemarkInlineNode(child));
+    }
+
+    function getAllowedRemarkInlineAttributes(node) {
+      if (node.tagName === "SPAN") {
+        return ["class", "data-remark-inline-class"];
+      }
+
+      if (node.tagName === "IMG") {
+        return ["src", "alt"];
+      }
+
+      if (node.tagName === "A") {
+        return ["href", "title"];
+      }
+
+      return [];
+    }
+
     function canSerializeSimpleTextBlock(element) {
       if (hasNonTrivialAttributes(element)) {
         return false;
@@ -4053,7 +4652,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       return Array.from(element.children).every((child) => {
-        return child.tagName === "LI" && canSerializeSimpleTextBlock(child);
+        return child.tagName === "LI" && canSerializeRemarkInlineBlock(child);
       });
     }
 
@@ -4092,6 +4691,94 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
         return child.tagName === "BR" ? "\n" : "";
       }).join("").trim();
+    }
+
+    function serializeRemarkInlineChildren(element) {
+      return Array.from(element.childNodes).map((child) => serializeRemarkInlineNode(child)).join("").trim();
+    }
+
+    function serializeRemarkInlineNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return encodeRemarkTextNode(node.textContent);
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return "";
+      }
+
+      const element = node;
+
+      if (element.tagName === "BR") {
+        return "<br>";
+      }
+
+      if (element.tagName === "IMG" && canSerializeSimpleStandaloneImage(element)) {
+        return `![${encodeRemarkAttributeText(element.getAttribute("alt") || "")}](${element.getAttribute("src") || ""})`;
+      }
+
+      if (element.tagName === "A" && !hasNonTrivialAttributes(element, ["href", "title"])) {
+        return `[${serializeRemarkInlineChildren(element)}](${element.getAttribute("href") || ""})`;
+      }
+
+      if (element.tagName === "CODE" && !hasNonTrivialAttributes(element)) {
+        return `\`${serializeRemarkInlineChildren(element).replace(/`/g, "\\`")}\``;
+      }
+
+      if ((element.tagName === "STRONG" || element.tagName === "B") && !hasNonTrivialAttributes(element)) {
+        return `**${serializeRemarkInlineChildren(element)}**`;
+      }
+
+      if ((element.tagName === "EM" || element.tagName === "I") && !hasNonTrivialAttributes(element)) {
+        return `*${serializeRemarkInlineChildren(element)}*`;
+      }
+
+      if (element.tagName === "DEL" && !hasNonTrivialAttributes(element)) {
+        return `~~${serializeRemarkInlineChildren(element)}~~`;
+      }
+
+      if (element.tagName === "SPAN" && !hasNonTrivialAttributes(element, ["class", "data-remark-inline-class"])) {
+        const className = element.getAttribute("data-remark-inline-class") || element.getAttribute("class") || "";
+        if (/^[A-Za-z0-9_-]+$/.test(className)) {
+          return `.${className}[${serializeRemarkInlineChildren(element)}]`;
+        }
+      }
+
+      if (REMARK_INLINE_HTML_TAGS.has(element.tagName)) {
+        return serializeElementHtmlForRemark(element);
+      }
+
+      return element.outerHTML;
+    }
+
+    function encodeRemarkTextNode(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function encodeRemarkAttributeText(value) {
+      return String(value || "")
+        .replace(/]/g, "\\]")
+        .replace(/\[/g, "\\[");
+    }
+
+    function serializeElementHtmlForRemark(element) {
+      const tagName = element.tagName.toLowerCase();
+      const attributes = Array.from(element.attributes)
+        .filter((attribute) => attribute.name !== "data-remark-inline-class")
+        .map((attribute) => ` ${attribute.name}="${escapeHtmlAttribute(attribute.value)}"`)
+        .join("");
+
+      if (tagName === "br") {
+        return "<br>";
+      }
+
+      if (tagName === "img") {
+        return `<img${attributes}>`;
+      }
+
+      return `<${tagName}${attributes}>${serializeRemarkInlineChildren(element)}</${tagName}>`;
     }
 
     function escapeHtml(value) {
