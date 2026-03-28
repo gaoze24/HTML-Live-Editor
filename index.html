@@ -265,7 +265,10 @@
       color: var(--accent-strong);
     }
 
+    .ghost-button:disabled,
+    .primary-button:disabled,
     .toolbar-toggle:disabled,
+    .preview-zoom-select:disabled,
     .toolbar-control input:disabled,
     .toolbar-control select:disabled,
     .toolbar-control button:disabled {
@@ -277,6 +280,7 @@
     .ghost-button:focus-visible,
     .primary-button:focus-visible,
     .toolbar-toggle:focus-visible,
+    .preview-zoom-select:focus-visible,
     .toolbar-control select:focus-visible,
     .toolbar-control input:focus-visible,
     .source-input:focus-visible {
@@ -386,6 +390,15 @@
       padding: 0.62rem 0.84rem 0.56rem;
       border-bottom: 1px solid var(--border);
       background: var(--panel-strong);
+      flex-shrink: 0;
+    }
+
+    .panel__header-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.45rem;
+      flex-wrap: wrap;
       flex-shrink: 0;
     }
 
@@ -561,6 +574,42 @@
       border: 0;
       border-radius: inherit;
       background: #ffffff;
+    }
+
+    .preview-zoom-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: var(--shadow-soft);
+      min-width: 0;
+    }
+
+    .preview-zoom-button,
+    .preview-zoom-reset {
+      min-height: 1.85rem;
+      padding: 0.38rem 0.68rem;
+      font-size: 0.76rem;
+    }
+
+    .preview-zoom-button {
+      min-width: 1.9rem;
+      padding-inline: 0.52rem;
+    }
+
+    .preview-zoom-select {
+      height: 1.85rem;
+      min-width: 7.4rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-strong);
+      color: var(--text);
+      padding: 0 0.72rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      font-size: 0.76rem;
     }
 
     .status {
@@ -821,7 +870,25 @@
             <h2>Live Preview</h2>
             <p id="previewPanelDescription" hidden></p>
           </div>
-          <span class="helper-pill" id="editorStatus">Ready</span>
+          <div class="panel__header-actions">
+            <div class="preview-zoom-controls" aria-label="Preview zoom controls">
+              <button class="ghost-button preview-zoom-button" id="zoomOutButton" type="button" title="Zoom out">-</button>
+              <label class="sr-only" for="zoomSelect">Preview zoom</label>
+              <select class="preview-zoom-select" id="zoomSelect" aria-label="Preview zoom">
+                <option value="50">50%</option>
+                <option value="75">75%</option>
+                <option value="100" selected>100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+                <option value="200">200%</option>
+                <option value="fit-width">Fit to Width</option>
+                <option value="fit-page">Fit to Page</option>
+              </select>
+              <button class="ghost-button preview-zoom-button" id="zoomInButton" type="button" title="Zoom in">+</button>
+              <button class="ghost-button preview-zoom-reset" id="zoomResetButton" type="button" title="Reset zoom to 100%">100%</button>
+            </div>
+            <span class="helper-pill" id="editorStatus">Ready</span>
+          </div>
         </div>
 
         <div class="preview-panel__body">
@@ -1518,6 +1585,8 @@ Edit the slide source on the left, or add text and images directly in the previe
       previewSyncTimer: null,
       overlaySyncFrame: null,
       activeAlignmentGuides: null,
+      previewZoomMode: "manual",
+      previewZoomScale: 1,
       selectedElement: null,
       selectedPage: null,
       pendingImageTarget: null,
@@ -1536,6 +1605,10 @@ Edit the slide source on the left, or add text and images directly in the previe
 
     const ALIGNMENT_SNAP_THRESHOLD = 6;
     const ALIGNMENT_GUIDE_THICKNESS = 2;
+    const PREVIEW_ZOOM_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+    const PREVIEW_ZOOM_MIN = 0.25;
+    const PREVIEW_ZOOM_MAX = 3;
+    const PREVIEW_ZOOM_STYLE_ID = "editor-preview-zoom-style";
 
     const STORAGE_KEYS = {
       sourcePaneSize: "html-live-editor:source-pane-size",
@@ -1559,6 +1632,10 @@ Edit the slide source on the left, or add text and images directly in the previe
     const htmlImportPicker = document.getElementById("htmlImportPicker");
     const sanitizationBadge = document.getElementById("sanitizationBadge");
     const editorStatus = document.getElementById("editorStatus");
+    const zoomOutButton = document.getElementById("zoomOutButton");
+    const zoomSelect = document.getElementById("zoomSelect");
+    const zoomInButton = document.getElementById("zoomInButton");
+    const zoomResetButton = document.getElementById("zoomResetButton");
     const previewHint = document.getElementById("previewHint");
     const sourceStats = document.getElementById("sourceStats");
     const pageSelect = document.getElementById("pageSelect");
@@ -1625,6 +1702,7 @@ Edit the slide source on the left, or add text and images directly in the previe
       restoreWorkspacePreferences();
       bindAppEvents();
       bindResizeHandles();
+      updatePreviewZoomUi();
       applyWorkspacePreferences();
       loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
     }
@@ -1691,6 +1769,10 @@ Edit the slide source on the left, or add text and images directly in the previe
 
       exportButton.addEventListener("click", exportEditedPage);
       imagePicker.addEventListener("change", handleImageSelection);
+      zoomOutButton.addEventListener("click", () => stepPreviewZoom(-1));
+      zoomInButton.addEventListener("click", () => stepPreviewZoom(1));
+      zoomResetButton.addEventListener("click", resetPreviewZoom);
+      zoomSelect.addEventListener("change", handlePreviewZoomSelect);
 
       pageSelect.addEventListener("change", () => {
         const previewDocument = previewFrame.contentDocument;
@@ -1805,6 +1887,11 @@ Edit the slide source on the left, or add text and images directly in the previe
         apply: (value) => {
           appState.sourcePaneSize = Math.round(value);
           applyWorkspacePreferences();
+          if (appState.previewZoomMode !== "manual") {
+            applyPreviewZoom();
+          } else {
+            scheduleOverlayRefresh();
+          }
           persistWorkspacePreference(STORAGE_KEYS.sourcePaneSize, appState.sourcePaneSize);
         }
       });
@@ -1822,6 +1909,11 @@ Edit the slide source on the left, or add text and images directly in the previe
         apply: (value) => {
           appState.notesPaneSize = Math.round(value);
           applyWorkspacePreferences();
+          if (appState.previewZoomMode !== "manual") {
+            applyPreviewZoom();
+          } else {
+            scheduleOverlayRefresh();
+          }
           persistWorkspacePreference(STORAGE_KEYS.notesPaneSize, appState.notesPaneSize);
         }
       });
@@ -1883,10 +1975,197 @@ Edit the slide source on the left, or add text and images directly in the previe
       previewSplit.style.setProperty("--presenter-notes-size", `${Math.round(notesPaneSize)}px`);
     }
 
+    function formatZoomPercentage(scale) {
+      return `${Math.round(scale * 100)}%`;
+    }
+
+    function getAppliedPreviewZoomScale() {
+      return clamp(appState.previewZoomScale || 1, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
+    }
+
+    function getPreviewZoomOption(value) {
+      return Array.from(zoomSelect.options).find((option) => option.value === value) || null;
+    }
+
+    function updatePreviewZoomUi() {
+      const scale = getAppliedPreviewZoomScale();
+      const fitWidthOption = getPreviewZoomOption("fit-width");
+      const fitPageOption = getPreviewZoomOption("fit-page");
+
+      if (fitWidthOption) {
+        fitWidthOption.textContent = appState.previewZoomMode === "fit-width"
+          ? `Fit to Width (${formatZoomPercentage(scale)})`
+          : "Fit to Width";
+      }
+
+      if (fitPageOption) {
+        fitPageOption.textContent = appState.previewZoomMode === "fit-page"
+          ? `Fit to Page (${formatZoomPercentage(scale)})`
+          : "Fit to Page";
+      }
+
+      if (appState.previewZoomMode === "manual") {
+        zoomSelect.value = String(Math.round(scale * 100));
+      } else {
+        zoomSelect.value = appState.previewZoomMode;
+      }
+
+      zoomResetButton.disabled = appState.previewZoomMode === "manual" && Math.abs(scale - 1) < 0.001;
+
+      const canZoomOut = PREVIEW_ZOOM_PRESETS.some((preset) => preset < scale - 0.001);
+      const canZoomIn = PREVIEW_ZOOM_PRESETS.some((preset) => preset > scale + 0.001);
+      zoomOutButton.disabled = !canZoomOut;
+      zoomInButton.disabled = !canZoomIn;
+      zoomSelect.title = appState.previewZoomMode === "manual"
+        ? `Preview zoom ${formatZoomPercentage(scale)}`
+        : `${zoomSelect.selectedOptions[0]?.textContent || "Preview zoom"}`;
+    }
+
+    function capturePreviewScrollState() {
+      const previewDocument = previewFrame.contentDocument;
+      const previewWindow = previewFrame.contentWindow;
+      if (!previewDocument || !previewWindow) {
+        return null;
+      }
+
+      const root = previewDocument.documentElement;
+      const maxScrollX = Math.max(0, root.scrollWidth - root.clientWidth);
+      const maxScrollY = Math.max(0, root.scrollHeight - root.clientHeight);
+      return {
+        ratioX: maxScrollX > 0 ? previewWindow.scrollX / maxScrollX : 0,
+        ratioY: maxScrollY > 0 ? previewWindow.scrollY / maxScrollY : 0
+      };
+    }
+
+    function restorePreviewScrollState(scrollState) {
+      const previewDocument = previewFrame.contentDocument;
+      const previewWindow = previewFrame.contentWindow;
+      if (!previewDocument || !previewWindow || !scrollState) {
+        return;
+      }
+
+      const root = previewDocument.documentElement;
+      const maxScrollX = Math.max(0, root.scrollWidth - root.clientWidth);
+      const maxScrollY = Math.max(0, root.scrollHeight - root.clientHeight);
+      previewWindow.scrollTo(maxScrollX * scrollState.ratioX, maxScrollY * scrollState.ratioY);
+    }
+
+    function getPreviewZoomReferencePage(previewDocument) {
+      if (appState.selectedPage && appState.selectedPage.ownerDocument === previewDocument && previewDocument.contains(appState.selectedPage)) {
+        return appState.selectedPage;
+      }
+
+      return getPageElements(previewDocument)[0] || previewDocument.body || null;
+    }
+
+    function computePreviewZoomScale(previewDocument) {
+      if (appState.previewZoomMode === "manual") {
+        return getAppliedPreviewZoomScale();
+      }
+
+      const page = getPreviewZoomReferencePage(previewDocument);
+      if (!page) {
+        return 1;
+      }
+
+      const currentScale = getAppliedPreviewZoomScale() || 1;
+      const rect = page.getBoundingClientRect();
+      const unscaledWidth = rect.width > 0 ? rect.width / currentScale : rect.width;
+      const unscaledHeight = rect.height > 0 ? rect.height / currentScale : rect.height;
+      const viewportWidth = previewDocument.documentElement?.clientWidth || previewFrame.clientWidth || rect.width || 1;
+      const viewportHeight = previewDocument.documentElement?.clientHeight || previewFrame.clientHeight || rect.height || 1;
+      const inset = 24;
+      const widthScale = unscaledWidth > 0 ? (Math.max(80, viewportWidth - inset) / unscaledWidth) : 1;
+      const heightScale = unscaledHeight > 0 ? (Math.max(80, viewportHeight - inset) / unscaledHeight) : 1;
+
+      return clamp(
+        appState.previewZoomMode === "fit-width" ? widthScale : Math.min(widthScale, heightScale),
+        PREVIEW_ZOOM_MIN,
+        PREVIEW_ZOOM_MAX
+      );
+    }
+
+    function ensurePreviewZoomStyle(previewDocument) {
+      let zoomStyle = previewDocument.getElementById(PREVIEW_ZOOM_STYLE_ID);
+      if (zoomStyle) {
+        return zoomStyle;
+      }
+
+      zoomStyle = previewDocument.createElement("style");
+      zoomStyle.id = PREVIEW_ZOOM_STYLE_ID;
+      previewDocument.head.appendChild(zoomStyle);
+      return zoomStyle;
+    }
+
+    function applyPreviewZoom(options = {}) {
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        updatePreviewZoomUi();
+        return;
+      }
+
+      const scrollState = options.preserveScroll === false ? null : capturePreviewScrollState();
+      const scale = computePreviewZoomScale(previewDocument);
+      const inverseScale = scale > 0 ? 1 / scale : 1;
+      const zoomStyle = ensurePreviewZoomStyle(previewDocument);
+
+      appState.previewZoomScale = scale;
+      zoomStyle.textContent = `
+        html[data-editor-preview-root="true"] body[data-editor-preview="true"] {
+          zoom: ${scale.toFixed(4)};
+        }
+
+        html[data-editor-preview-root="true"] [data-editor-overlay-root="true"] {
+          zoom: ${inverseScale.toFixed(4)};
+        }
+      `;
+
+      updatePreviewZoomUi();
+      window.requestAnimationFrame(() => {
+        restorePreviewScrollState(scrollState);
+        scheduleOverlayRefresh();
+      });
+    }
+
+    function setManualPreviewZoom(scale) {
+      appState.previewZoomMode = "manual";
+      appState.previewZoomScale = clamp(scale, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
+      applyPreviewZoom();
+    }
+
+    function resetPreviewZoom() {
+      setManualPreviewZoom(1);
+    }
+
+    function stepPreviewZoom(direction) {
+      const scale = getAppliedPreviewZoomScale();
+      const nextScale = direction > 0
+        ? (PREVIEW_ZOOM_PRESETS.find((preset) => preset > scale + 0.001) || scale)
+        : ([...PREVIEW_ZOOM_PRESETS].reverse().find((preset) => preset < scale - 0.001) || scale);
+
+      setManualPreviewZoom(nextScale);
+    }
+
+    function handlePreviewZoomSelect() {
+      const value = zoomSelect.value;
+      if (value === "fit-width" || value === "fit-page") {
+        appState.previewZoomMode = value;
+        applyPreviewZoom();
+        return;
+      }
+
+      const percent = Number(value);
+      if (!Number.isFinite(percent) || percent <= 0) {
+        updatePreviewZoomUi();
+        return;
+      }
+
+      setManualPreviewZoom(percent / 100);
+    }
+
     function handleWindowResize() {
       applyWorkspacePreferences();
       updatePresenterViewUi();
-      scheduleOverlayRefresh();
     }
 
     function persistWorkspacePreference(key, value) {
@@ -1944,6 +2223,12 @@ Edit the slide source on the left, or add text and images directly in the previe
       workspace.classList.toggle("is-collapsed", shouldCollapse);
       toggleSourceButton.setAttribute("aria-expanded", String(!shouldCollapse));
       toggleSourceButton.textContent = shouldCollapse ? "Show Source" : "Hide Source";
+      applyWorkspacePreferences();
+      if (appState.previewZoomMode !== "manual") {
+        applyPreviewZoom();
+      } else {
+        scheduleOverlayRefresh();
+      }
     }
 
     function createDefaultRemarkModel() {
@@ -2345,6 +2630,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       updatePagePicker(previewDocument);
       updateToolbarState();
+      applyPreviewZoom({ preserveScroll: false });
       refreshSelectionOverlay();
       appState.pendingSelection = null;
     }
@@ -3289,27 +3575,27 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       };
     }
 
-    function resolveDragAlignment(proposedX, proposedY, dragState) {
+    function resolveDragAlignment(proposedDeltaX, proposedDeltaY, dragState) {
       const previewRect = offsetRectSnapshot(
         dragState.startRect,
-        proposedX - dragState.startTranslateX,
-        proposedY - dragState.startTranslateY
+        proposedDeltaX,
+        proposedDeltaY
       );
       const xCandidate = findBestAlignment("x", previewRect, dragState.alignmentContext);
       const yCandidate = findBestAlignment("y", previewRect, dragState.alignmentContext);
-      const nextX = Math.round(clamp(proposedX + (xCandidate?.diff || 0), dragState.minX, dragState.maxX));
-      const nextY = Math.round(clamp(proposedY + (yCandidate?.diff || 0), dragState.minY, dragState.maxY));
+      const nextDeltaX = clamp(proposedDeltaX + (xCandidate?.diff || 0), dragState.minDeltaX, dragState.maxDeltaX);
+      const nextDeltaY = clamp(proposedDeltaY + (yCandidate?.diff || 0), dragState.minDeltaY, dragState.maxDeltaY);
       const resolvedRect = offsetRectSnapshot(
         dragState.startRect,
-        nextX - dragState.startTranslateX,
-        nextY - dragState.startTranslateY
+        nextDeltaX,
+        nextDeltaY
       );
       const resolvedX = isAlignmentSatisfied(xCandidate, resolvedRect) ? xCandidate : null;
       const resolvedY = isAlignmentSatisfied(yCandidate, resolvedRect) ? yCandidate : null;
 
       return {
-        nextX,
-        nextY,
+        nextDeltaX,
+        nextDeltaY,
         guides: [
           buildAlignmentGuide(resolvedX, resolvedRect, dragState.alignmentContext),
           buildAlignmentGuide(resolvedY, resolvedRect, dragState.alignmentContext)
@@ -3339,6 +3625,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const startRect = createRectSnapshot(element.getBoundingClientRect());
       const boundaryRect = createRectSnapshot(boundary.getBoundingClientRect());
       const alignmentContext = buildDragAlignmentContext(element, boundary);
+      const zoomScale = getAppliedPreviewZoomScale() || 1;
       const padding = 8;
 
       element.setAttribute("data-editor-dragging", "true");
@@ -3349,26 +3636,25 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         const deltaX = moveEvent.clientX - startX;
         const deltaY = moveEvent.clientY - startY;
 
-        const minX = startTranslateX + (boundaryRect.left + padding - startRect.left);
-        const maxX = startTranslateX + (boundaryRect.right - padding - startRect.right);
-        const minY = startTranslateY + (boundaryRect.top + padding - startRect.top);
-        const maxY = startTranslateY + (boundaryRect.bottom - padding - startRect.bottom);
-
-        const nextX = clamp(startTranslateX + deltaX, minX, maxX);
-        const nextY = clamp(startTranslateY + deltaY, minY, maxY);
-        const resolvedDrag = resolveDragAlignment(nextX, nextY, {
+        const minDeltaX = boundaryRect.left + padding - startRect.left;
+        const maxDeltaX = boundaryRect.right - padding - startRect.right;
+        const minDeltaY = boundaryRect.top + padding - startRect.top;
+        const maxDeltaY = boundaryRect.bottom - padding - startRect.bottom;
+        const nextDeltaX = clamp(deltaX, minDeltaX, maxDeltaX);
+        const nextDeltaY = clamp(deltaY, minDeltaY, maxDeltaY);
+        const resolvedDrag = resolveDragAlignment(nextDeltaX, nextDeltaY, {
           startRect,
-          startTranslateX,
-          startTranslateY,
-          minX,
-          maxX,
-          minY,
-          maxY,
+          minDeltaX,
+          maxDeltaX,
+          minDeltaY,
+          maxDeltaY,
           alignmentContext
         });
+        const translatedX = startTranslateX + resolvedDrag.nextDeltaX / zoomScale;
+        const translatedY = startTranslateY + resolvedDrag.nextDeltaY / zoomScale;
 
-        element.setAttribute("data-editor-translate-x", String(resolvedDrag.nextX));
-        element.setAttribute("data-editor-translate-y", String(resolvedDrag.nextY));
+        element.setAttribute("data-editor-translate-x", String(Math.round(translatedX)));
+        element.setAttribute("data-editor-translate-y", String(Math.round(translatedY)));
         applyManagedTransform(element);
         renderAlignmentGuides(previewDocument, resolvedDrag.guides);
         scheduleOverlayRefresh();
@@ -3532,8 +3818,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       if (imageTarget) {
         const computed = previewFrame.contentWindow.getComputedStyle(imageTarget);
-        imageWidthControl.value = Math.max(1, Math.round(imageTarget.getBoundingClientRect().width));
-        imageHeightControl.value = Math.max(1, Math.round(imageTarget.getBoundingClientRect().height));
+        imageWidthControl.value = Math.max(1, Math.round(parseFloat(imageTarget.style.width || computed.width) || 1));
+        imageHeightControl.value = Math.max(1, Math.round(parseFloat(imageTarget.style.height || computed.height) || 1));
         imageRadiusControl.value = Math.max(0, Math.round(parseFloat(computed.borderTopLeftRadius) || 0));
         imageOpacityControl.value = Math.round((parseFloat(computed.opacity) || 1) * 100);
         imageRotateControl.value = Math.round(getTransformValue(imageTarget, "data-editor-rotate"));
@@ -3585,6 +3871,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         setPresenterNotesValue("");
         presenterNotesStatus.textContent = "Notes hidden";
         presenterNotesInput.disabled = true;
+        if (appState.previewZoomMode !== "manual") {
+          applyPreviewZoom();
+        } else {
+          scheduleOverlayRefresh();
+        }
         return;
       }
 
@@ -3593,6 +3884,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       setPresenterNotesValue(notes);
       presenterNotesInput.disabled = !slide;
       presenterNotesStatus.textContent = notes ? "Notes visible" : "No notes yet";
+      if (appState.previewZoomMode !== "manual") {
+        applyPreviewZoom();
+      } else {
+        scheduleOverlayRefresh();
+      }
     }
 
     function setPresenterNotesValue(value) {
@@ -4077,6 +4373,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function serializePreviewDocument(previewDocument, forExport) {
       const clone = previewDocument.documentElement.cloneNode(true);
       clone.querySelector("#editor-preview-style")?.remove();
+      clone.querySelector(`#${PREVIEW_ZOOM_STYLE_ID}`)?.remove();
       clone.querySelectorAll("[data-editor-overlay-root]").forEach((overlay) => overlay.remove());
 
       clone.querySelectorAll("*").forEach((element) => {
