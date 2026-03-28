@@ -5,7 +5,7 @@ A single-file HTML editor for two related workflows:
 - editing normal HTML presentation/page documents
 - opening, editing, creating, and exporting remark-style slideshow HTML files
 
-Everything lives in [index.html](/Users/eddie/Projects/HTML-Live-Editor/index.html). There are no build steps, frameworks, or package dependencies.
+Everything lives in index.html. There are no build steps, frameworks, or package dependencies.
 
 ## What It Does
 
