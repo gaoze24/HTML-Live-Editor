@@ -152,9 +152,9 @@
     }
 
     #pageControlsGroup {
-      flex: 1 1 28rem;
-      min-width: min(100%, 18rem);
-      max-width: 42rem;
+      flex: 1 1 24rem;
+      min-width: min(100%, 16rem);
+      max-width: 34rem;
     }
 
     #pageControlsGroup .toolbar-control {
@@ -268,7 +268,8 @@
 
     .toolbar-control select,
     .toolbar-control input[type="number"],
-    .toolbar-control input[type="color"] {
+    .toolbar-control input[type="color"],
+    .toolbar-control input[type="text"] {
       height: 1.6rem;
       border: 1px solid var(--border);
       border-radius: 999px;
@@ -277,10 +278,15 @@
       padding: 0 0.6rem;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
       font-size: 0.76rem;
+      min-width: 0;
     }
 
     .toolbar-control input[type="number"] {
       width: 4.35rem;
+    }
+
+    .toolbar-control input[type="text"] {
+      width: 10rem;
     }
 
     .toolbar-control input[type="color"] {
@@ -520,16 +526,34 @@
         <div class="toolbar__group">
           <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
           <button class="ghost-button" id="importHtmlButton" type="button">Import HTML</button>
+          <button class="ghost-button" id="newHtmlButton" type="button">New HTML</button>
+          <button class="ghost-button" id="newRemarkButton" type="button">New Remark Deck</button>
           <button class="ghost-button" id="newPageButton" type="button">New Page</button>
           <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
           <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
           <button class="primary-button" id="exportButton" type="button">Export HTML</button>
         </div>
 
+        <div class="toolbar__group">
+          <span class="helper-pill" id="modeBadge">Mode: Normal HTML</span>
+        </div>
+
         <div class="toolbar__group" id="pageControlsGroup">
           <label class="toolbar-control toolbar-control--wide">
-            <span>Page</span>
+            <span id="pageSelectLabel">Page</span>
             <select id="pageSelect"></select>
+          </label>
+        </div>
+
+        <div class="toolbar__group" id="deleteControlsGroup">
+          <button class="ghost-button" id="deleteElementButton" type="button" disabled>Delete Element</button>
+          <button class="ghost-button" id="deletePageButton" type="button" disabled>Delete Page</button>
+        </div>
+
+        <div class="toolbar__group" id="remarkMetaGroup" hidden>
+          <label class="toolbar-control">
+            <span>Class</span>
+            <input id="slideClassControl" type="text" placeholder="middle, center" spellcheck="false">
           </label>
         </div>
 
@@ -643,19 +667,19 @@
       <section class="panel source-panel" id="sourcePanel">
         <div class="panel__header">
           <div>
-            <h2>Source HTML</h2>
-            <p>Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
+            <h2 id="sourcePanelTitle">Source HTML</h2>
+            <p id="sourcePanelDescription">Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.</p>
           </div>
           <span class="helper-pill" id="sanitizationBadge">Safe preview ready</span>
         </div>
 
         <div class="source-panel__body">
           <div class="helper-row">
-            <span>Rendered preview stays editable, movable, and exportable.</span>
+            <span id="sourceContextHint">Rendered preview stays editable, movable, and exportable.</span>
             <span id="sourceStats">0 characters</span>
           </div>
 
-          <label class="sr-only" for="sourceInput">HTML source</label>
+          <label class="sr-only" for="sourceInput">Editor source</label>
           <textarea class="source-input" id="sourceInput" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
         </div>
       </section>
@@ -664,7 +688,7 @@
         <div class="panel__header">
           <div>
             <h2>Live Preview</h2>
-            <p>Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.</p>
+            <p id="previewPanelDescription">Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.</p>
           </div>
           <span class="helper-pill" id="editorStatus">Ready</span>
         </div>
@@ -836,6 +860,27 @@
 </body>
 </html>`;
 
+    const DEFAULT_REMARK_SOURCE = `class: middle, center
+
+# New Deck
+
+Edit the slide source on the left, or add text and images directly in the preview.
+`;
+
+    const DEFAULT_REMARK_HEAD = `
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remark Deck</title>
+`;
+
+    const REMARK_PLACEHOLDER = '<remark-source-placeholder data-editor-remark-source="true"></remark-source-placeholder>';
+
+    const DEFAULT_REMARK_BODY = `${REMARK_PLACEHOLDER}
+  <script src="https://remarkjs.com/downloads/remark-latest.min.js"><\/script>
+  <script>
+    var slideshow = remark.create();
+  <\/script>`;
+
     const TEXT_EDITABLE_TAGS = new Set([
       "P",
       "SPAN",
@@ -855,7 +900,9 @@
       "LABEL",
       "CAPTION",
       "FIGCAPTION",
-      "SMALL"
+      "SMALL",
+      "PRE",
+      "CODE"
     ]);
 
     const INLINE_FORMATTING_TAGS = new Set([
@@ -865,7 +912,8 @@
       "I",
       "U",
       "MARK",
-      "SMALL"
+      "SMALL",
+      "CODE"
     ]);
 
     const STRUCTURAL_DESCENDANTS = [
@@ -905,6 +953,7 @@
     ]);
 
     const PAGE_HINT_PATTERN = /(?:^|[\s_-])(page|slide|canvas|sheet|artboard|screen)(?:$|[\s_-])/i;
+    const REMARK_DIRECTIVE_PATTERN = /^([A-Za-z0-9_-]+):(.*)$/;
 
     const IMAGE_FILTER_PRESETS = {
       none: "none",
@@ -947,7 +996,8 @@
         }
 
         :where([data-editor-page="true"][data-editor-page-kind="explicit"]),
-        :where([data-editor-page="true"][data-editor-page-kind="builder"]) {
+        :where([data-editor-page="true"][data-editor-page-kind="builder"]),
+        :where([data-editor-page="true"][data-editor-page-kind="remark"]) {
           box-shadow: 0 18px 52px rgba(15, 23, 42, 0.12);
         }
 
@@ -960,8 +1010,8 @@
         html[data-editor-preview-root="true"] body[data-editor-multipage="true"] :where([data-editor-page="true"][data-editor-page-label]:not(body))::before {
           content: attr(data-editor-page-label);
           position: absolute;
-          top: -14px;
-          left: 18px;
+          top: 14px;
+          left: 14px;
           padding: 0.35rem 0.72rem;
           border-radius: 999px;
           background: rgba(9, 95, 212, 0.94);
@@ -970,7 +1020,11 @@
           letter-spacing: 0.02em;
           box-shadow: 0 10px 24px rgba(15, 123, 255, 0.18);
           pointer-events: none;
-          z-index: 20;
+          z-index: 24;
+          max-width: calc(100% - 28px);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         :where([data-editor-selectable="true"]) {
@@ -1105,6 +1159,114 @@
         :where([data-editor-slide-baseline="true"]) ol {
           padding-left: 1.25em;
         }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] {
+          padding: 18px 18px 64px;
+          background:
+            radial-gradient(circle at top left, rgba(15, 123, 255, 0.12), transparent 32%),
+            linear-gradient(180deg, #eef3f8 0%, #e6edf7 100%);
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"]) {
+          width: min(1120px, calc(100% - 32px));
+          min-height: 630px;
+          margin-inline: auto;
+          padding: 54px 60px;
+          background:
+            radial-gradient(circle at top right, rgba(15, 123, 255, 0.08), transparent 32%),
+            #ffffff;
+          border: 1px solid rgba(20, 33, 61, 0.08);
+          border-radius: 30px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.9rem;
+          overflow: hidden;
+          position: relative;
+          color: #13203a;
+          font-family: "Aptos Display", "Segoe UI", "Trebuchet MS", sans-serif;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].middle) {
+          justify-content: center;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].center) {
+          text-align: center;
+          align-items: center;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].center) ul,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].center) ol {
+          align-self: stretch;
+          text-align: left;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].inverse) {
+          background: linear-gradient(135deg, #11203d, #1f345e);
+          color: #f7fbff;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] :where([data-editor-page="true"].inverse a) {
+          color: #9ed0ff;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h1,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h2,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h3 {
+          margin: 0;
+          line-height: 1.08;
+          letter-spacing: -0.03em;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h1 {
+          font-size: clamp(2.4rem, 4vw, 4rem);
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h2 {
+          font-size: clamp(1.9rem, 3vw, 3rem);
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] h3 {
+          font-size: clamp(1.45rem, 2.4vw, 2.2rem);
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] p,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] li,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] blockquote {
+          margin: 0;
+          font-size: clamp(1.02rem, 1.3vw, 1.18rem);
+          line-height: 1.6;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] ul,
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] ol {
+          margin: 0.15rem 0 0;
+          padding-left: 1.25rem;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] pre {
+          margin: 0;
+          padding: 1rem 1.1rem;
+          border-radius: 18px;
+          background: #10213f;
+          color: #f7fbff;
+          overflow: auto;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] code {
+          font-family: "Courier New", monospace;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] img {
+          max-width: 100%;
+          border-radius: 20px;
+          display: block;
+        }
+
+        html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] [data-remark-empty="true"] {
+          color: rgba(19, 32, 58, 0.5);
+          font-style: italic;
+        }
       </style>
     `;
 
@@ -1117,7 +1279,12 @@
       selectedPage: null,
       pendingImageTarget: null,
       imagePickerMode: null,
-      pageCounter: 0
+      pageCounter: 0,
+      remarkSlideCounter: 0,
+      exportFileName: "edited_presentation.html",
+      isUpdatingSourceInternally: false,
+      pendingSelection: null,
+      documentModel: null
     };
 
     const workspace = document.getElementById("workspace");
@@ -1125,6 +1292,8 @@
     const previewFrame = document.getElementById("previewFrame");
     const toggleSourceButton = document.getElementById("toggleSourceButton");
     const importHtmlButton = document.getElementById("importHtmlButton");
+    const newHtmlButton = document.getElementById("newHtmlButton");
+    const newRemarkButton = document.getElementById("newRemarkButton");
     const newPageButton = document.getElementById("newPageButton");
     const addTextButton = document.getElementById("addTextButton");
     const addImageButton = document.getElementById("addImageButton");
@@ -1136,6 +1305,16 @@
     const previewHint = document.getElementById("previewHint");
     const sourceStats = document.getElementById("sourceStats");
     const pageSelect = document.getElementById("pageSelect");
+    const pageSelectLabel = document.getElementById("pageSelectLabel");
+    const modeBadge = document.getElementById("modeBadge");
+    const deleteElementButton = document.getElementById("deleteElementButton");
+    const deletePageButton = document.getElementById("deletePageButton");
+    const sourcePanelTitle = document.getElementById("sourcePanelTitle");
+    const sourcePanelDescription = document.getElementById("sourcePanelDescription");
+    const sourceContextHint = document.getElementById("sourceContextHint");
+    const previewPanelDescription = document.getElementById("previewPanelDescription");
+    const remarkMetaGroup = document.getElementById("remarkMetaGroup");
+    const slideClassControl = document.getElementById("slideClassControl");
     const textControlsGroup = document.getElementById("textControlsGroup");
     const imageControlsGroup = document.getElementById("imageControlsGroup");
     const fontFamilyControl = document.getElementById("fontFamilyControl");
@@ -1178,21 +1357,19 @@
     ];
 
     function initialize() {
-      if (!sourceInput.value.trim()) {
-        sourceInput.value = STARTER_HTML;
-      }
-
-      updateSourceStats();
       bindAppEvents();
-      renderFromSource();
-      updateToolbarState();
+      loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
     }
 
     function bindAppEvents() {
       sourceInput.addEventListener("input", () => {
         updateSourceStats();
+        if (appState.isUpdatingSourceInternally) {
+          return;
+        }
+
         window.clearTimeout(appState.renderTimer);
-        appState.renderTimer = window.setTimeout(renderFromSource, 120);
+        appState.renderTimer = window.setTimeout(commitSourceInputToModel, 140);
       });
 
       toggleSourceButton.addEventListener("click", () => {
@@ -1205,6 +1382,26 @@
       });
 
       htmlImportPicker.addEventListener("change", handleHtmlImport);
+
+      newHtmlButton.addEventListener("click", () => {
+        if (!confirmResetDocument("Start a fresh normal HTML document?")) {
+          return;
+        }
+
+        loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
+        editorStatus.textContent = "New HTML document ready";
+        previewHint.textContent = "You are back in normal HTML mode with the starter page loaded.";
+      });
+
+      newRemarkButton.addEventListener("click", () => {
+        if (!confirmResetDocument("Start a new remark slideshow deck?")) {
+          return;
+        }
+
+        loadRemarkModel(createDefaultRemarkModel(), { fileName: "remark_deck.html" });
+        editorStatus.textContent = "New remark deck ready";
+        previewHint.textContent = "Slides now live inside a remark-compatible textarea source. Add more slides from the toolbar when you need them.";
+      });
 
       newPageButton.addEventListener("click", createNewPage);
       addTextButton.addEventListener("click", addTextBoxToCurrentPage);
@@ -1234,6 +1431,7 @@
         const page = getPageElements(previewDocument).find((candidate) => {
           return candidate.getAttribute("data-editor-page-id") === pageSelect.value;
         });
+
         if (!page) {
           return;
         }
@@ -1242,6 +1440,11 @@
         setCurrentPage(page, { scroll: true });
         updateToolbarState();
       });
+
+      deleteElementButton.addEventListener("click", deleteSelectedElement);
+      deletePageButton.addEventListener("click", deleteCurrentPage);
+      slideClassControl.addEventListener("input", handleSlideClassInput);
+      document.addEventListener("keydown", handleAppKeydown, true);
 
       fontFamilyControl.addEventListener("change", () => {
         applyInlineStyleToSelection("fontFamily", fontFamilyControl.value);
@@ -1316,10 +1519,98 @@
       });
     }
 
+    function confirmResetDocument(message) {
+      return !hasMeaningfulContent() || window.confirm(message);
+    }
+
+    function hasMeaningfulContent() {
+      const value = sourceInput.value.trim();
+      if (!value) {
+        return false;
+      }
+
+      if (isRemarkMode()) {
+        return value !== DEFAULT_REMARK_SOURCE.trim();
+      }
+
+      return value !== STARTER_HTML.trim();
+    }
+
+    function isRemarkMode() {
+      return appState.documentModel?.mode === "remark-slideshow";
+    }
+
     function setSourceCollapsed(shouldCollapse) {
       workspace.classList.toggle("is-collapsed", shouldCollapse);
       toggleSourceButton.setAttribute("aria-expanded", String(!shouldCollapse));
       toggleSourceButton.textContent = shouldCollapse ? "Show Source" : "Hide Source";
+    }
+
+    function createDefaultRemarkModel() {
+      return {
+        mode: "remark-slideshow",
+        doctype: "<!DOCTYPE html>",
+        htmlAttributes: ` lang="en"`,
+        headHtml: DEFAULT_REMARK_HEAD.trim(),
+        bodyTemplate: DEFAULT_REMARK_BODY,
+        textareaAttributes: ` id="source"`,
+        slides: parseRemarkDeckSource(DEFAULT_REMARK_SOURCE)
+      };
+    }
+
+    function createNormalModel(rawHtml) {
+      return {
+        mode: "normal-html",
+        rawHtml
+      };
+    }
+
+    function loadNormalDocument(rawHtml, options = {}) {
+      appState.documentModel = createNormalModel(rawHtml);
+      appState.exportFileName = options.fileName || "edited_presentation.html";
+      setSourceValue(rawHtml);
+      renderCurrentDocument();
+    }
+
+    function loadRemarkModel(model, options = {}) {
+      ensureRemarkSlidesExist(model);
+      appState.documentModel = model;
+      appState.exportFileName = options.fileName || "remark_deck.html";
+      setSourceValue(buildRemarkDeckSource(model));
+      renderCurrentDocument();
+    }
+
+    function loadRemarkDocumentFromHtml(rawHtml, options = {}) {
+      const model = createRemarkModelFromHtml(rawHtml);
+      loadRemarkModel(model, { fileName: options.fileName || "remark_deck.html" });
+    }
+
+    function setSourceValue(value) {
+      appState.isUpdatingSourceInternally = true;
+      sourceInput.value = value;
+      updateSourceStats();
+      appState.isUpdatingSourceInternally = false;
+    }
+
+    function updateModeUi() {
+      const inRemarkMode = isRemarkMode();
+      modeBadge.textContent = inRemarkMode ? "Mode: Remark Slideshow" : "Mode: Normal HTML";
+      pageSelectLabel.textContent = inRemarkMode ? "Slide" : "Page";
+      newPageButton.textContent = inRemarkMode ? "New Slide" : "New Page";
+      exportButton.textContent = inRemarkMode ? "Export Deck" : "Export HTML";
+      remarkMetaGroup.hidden = !inRemarkMode;
+
+      if (inRemarkMode) {
+        sourcePanelTitle.textContent = "Remark Slide Source";
+        sourcePanelDescription.textContent = "Edit the textarea-backed remark deck source directly. Slides stay separated by --- and export returns to a compatible wrapper HTML file.";
+        sourceContextHint.textContent = "Slide metadata lines like class:, name:, and layout: are preserved and round-trip back into <textarea id=\"source\">.";
+        previewPanelDescription.textContent = "Slides render as editable pages. Select visible content to style it, drag builder elements, and keep the underlying remark source in sync.";
+      } else {
+        sourcePanelTitle.textContent = "Source HTML";
+        sourcePanelDescription.textContent = "Paste or import a full HTML document or fragment. Scripts and inline event handlers are stripped before preview and export.";
+        sourceContextHint.textContent = "Rendered preview stays editable, movable, and exportable.";
+        previewPanelDescription.textContent = "Select any visible element to style or move it. Text edits happen in place, images can be replaced, and page-like sections stay separated in the editor.";
+      }
     }
 
     function handleHtmlImport(event) {
@@ -1337,32 +1628,97 @@
 
         clearSelection(false);
         appState.selectedPage = null;
-        sourceInput.value = reader.result;
-        updateSourceStats();
-        renderFromSource();
-        editorStatus.textContent = `Imported ${file.name}`;
-        previewHint.textContent = "Imported HTML is now the preview source. The same sanitizer used for pasted HTML is applied before rendering.";
+
+        if (detectRemarkHtml(reader.result)) {
+          loadRemarkDocumentFromHtml(reader.result, { fileName: file.name || "remark_deck.html" });
+          editorStatus.textContent = `Imported ${file.name} in remark mode`;
+          previewHint.textContent = "The file was detected as a remark slideshow. Each slide now appears as an editor page and exports back into the same wrapper style.";
+        } else {
+          loadNormalDocument(reader.result, { fileName: file.name || "edited_presentation.html" });
+          editorStatus.textContent = `Imported ${file.name}`;
+          previewHint.textContent = "Imported HTML is now the preview source. The same sanitizer used for pasted HTML is applied before rendering.";
+        }
       };
 
       reader.readAsText(file);
       htmlImportPicker.value = "";
     }
 
-    function renderFromSource() {
+    function commitSourceInputToModel() {
+      window.clearTimeout(appState.renderTimer);
+      appState.renderTimer = null;
+
+      const rawValue = sourceInput.value;
+      if (isRemarkMode()) {
+        const selectedSlide = getCurrentRemarkSlide();
+        appState.pendingSelection = {
+          remarkSlideId: selectedSlide?.id || null,
+          index: getActivePageIndex()
+        };
+        appState.documentModel.slides = parseRemarkDeckSource(rawValue);
+        ensureRemarkSlidesExist(appState.documentModel);
+        renderCurrentDocument();
+        editorStatus.textContent = "Rendered remark source";
+        previewHint.textContent = "Slide separators, metadata, and markdown-like content have been re-parsed into editable slides.";
+        return;
+      }
+
+      if (detectRemarkHtml(rawValue)) {
+        loadRemarkDocumentFromHtml(rawValue, { fileName: appState.exportFileName || "remark_deck.html" });
+        editorStatus.textContent = "Switched to remark slideshow mode";
+        previewHint.textContent = "A remark-style wrapper was detected automatically, so the editor is now treating the file as a slide deck.";
+        return;
+      }
+
+      appState.documentModel.rawHtml = rawValue;
+      renderCurrentDocument();
+    }
+
+    function renderCurrentDocument() {
       clearSelection(false);
       appState.selectedPage = null;
+      updateModeUi();
 
-      const sanitizedDocument = sanitizeHtmlDocument(sourceInput.value);
+      if (isRemarkMode()) {
+        renderRemarkPreview();
+      } else {
+        renderNormalPreview();
+      }
+    }
+
+    function renderNormalPreview() {
+      const rawHtml = appState.documentModel?.rawHtml || "";
+
+      if (detectRemarkHtml(rawHtml)) {
+        loadRemarkDocumentFromHtml(rawHtml, { fileName: appState.exportFileName || "remark_deck.html" });
+        return;
+      }
+
+      const sanitizedDocument = sanitizeHtmlDocument(rawHtml);
       appState.lastDoctype = sanitizedDocument.doctype;
-
       const previewMarkup = buildPreviewMarkup(sanitizedDocument.document);
+
       editorStatus.textContent = "Rendering preview";
+      previewHint.textContent = "Click any element to select it. Use the Move handle on the selection outline for drag positioning.";
       sanitizationBadge.textContent = buildSanitizationLabel(sanitizedDocument.stats);
 
       previewFrame.onload = () => {
         decoratePreviewDocument();
         editorStatus.textContent = "Preview ready";
-        previewHint.textContent = "Click any element to select it. Use the Move handle on the selection outline for drag positioning.";
+      };
+
+      previewFrame.srcdoc = previewMarkup;
+    }
+
+    function renderRemarkPreview() {
+      const previewMarkup = buildRemarkPreviewMarkup(appState.documentModel);
+      editorStatus.textContent = "Rendering remark preview";
+      previewHint.textContent = "Slides are editable pages. Use the source panel for raw slide structure, or edit visible content directly.";
+      sanitizationBadge.textContent = "Remark slideshow mode";
+
+      previewFrame.onload = () => {
+        decoratePreviewDocument();
+        editorStatus.textContent = "Remark preview ready";
       };
 
       previewFrame.srcdoc = previewMarkup;
@@ -1371,13 +1727,27 @@
     function sanitizeHtmlDocument(rawHtml) {
       const parser = new DOMParser();
       const documentNode = parser.parseFromString(rawHtml || "", "text/html");
-      const stats = {
+      const stats = createSanitizationStats();
+      sanitizeDocumentNode(documentNode, stats);
+      ensureDocumentShape(documentNode);
+
+      return {
+        document: documentNode,
+        doctype: extractDoctype(rawHtml) || serializeDoctype(documentNode),
+        stats
+      };
+    }
+
+    function createSanitizationStats() {
+      return {
         scriptsRemoved: 0,
         handlersRemoved: 0,
         dangerousLinksNeutralized: 0,
         refreshTagsRemoved: 0
       };
+    }
 
+    function sanitizeDocumentNode(documentNode, stats) {
       documentNode.querySelectorAll("script").forEach((script) => {
         stats.scriptsRemoved += 1;
         script.remove();
@@ -1404,12 +1774,15 @@
           }
         });
       });
+    }
 
-      ensureDocumentShape(documentNode);
-
+    function sanitizeHtmlFragment(rawHtml) {
+      const parser = new DOMParser();
+      const documentNode = parser.parseFromString(`<!DOCTYPE html><html><body>${rawHtml || ""}</body></html>`, "text/html");
+      const stats = createSanitizationStats();
+      sanitizeDocumentNode(documentNode, stats);
       return {
-        document: documentNode,
-        doctype: serializeDoctype(documentNode),
+        html: documentNode.body.innerHTML,
         stats
       };
     }
@@ -1424,6 +1797,11 @@
         const body = documentNode.createElement("body");
         documentNode.documentElement.appendChild(body);
       }
+    }
+
+    function extractDoctype(rawHtml) {
+      const match = String(rawHtml || "").match(/^\s*(<!doctype[^>]+>)/i);
+      return match ? match[1] : "";
     }
 
     function serializeDoctype(documentNode) {
@@ -1456,6 +1834,35 @@
       return `${appState.lastDoctype}\n${previewDocument.documentElement.outerHTML}`;
     }
 
+    function buildRemarkPreviewMarkup(model) {
+      const slidesMarkup = model.slides.map((slide, index) => {
+        return buildRemarkSlideMarkup(slide, index);
+      }).join("\n");
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remark Preview</title>
+  ${EDITOR_STYLE}
+</head>
+<body data-editor-preview="true" data-editor-multipage="true" data-editor-mode="remark-slideshow">
+${slidesMarkup}
+</body>
+</html>`;
+    }
+
+    function buildRemarkSlideMarkup(slide, index) {
+      const classes = extractRemarkClasses(getSlideDirectiveValue(slide, "class"));
+      const classAttr = classes.length ? ` class="remark-editor-slide ${classes.join(" ")}"` : ` class="remark-editor-slide"`;
+      const content = renderRemarkSlideBody(slide.bodySource || "");
+
+      return `<section${classAttr} data-remark-slide-page="true" data-remark-slide-id="${escapeHtmlAttribute(slide.id)}" aria-label="Slide ${index + 1}">
+${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty slide</p>'}
+</section>`;
+    }
+
     function decoratePreviewDocument() {
       const previewDocument = previewFrame.contentDocument;
 
@@ -1465,18 +1872,29 @@
 
       previewDocument.documentElement.setAttribute("data-editor-preview-root", "true");
       previewDocument.body.setAttribute("data-editor-preview", "true");
+      previewDocument.body.setAttribute("data-editor-mode", isRemarkMode() ? "remark-slideshow" : "normal-html");
       initializePageModel(previewDocument);
       markInteractiveNodes(previewDocument);
       ensureEditorOverlay(previewDocument);
       bindPreviewEvents(previewDocument);
-      const initialPage = ensureCurrentPage(previewDocument, true);
-      setCurrentPage(initialPage, { scroll: false });
+
+      const initialPage = resolvePendingPage(previewDocument) || ensureCurrentPage(previewDocument, true);
+      if (initialPage) {
+        setCurrentPage(initialPage, { scroll: false });
+      }
+
       updatePagePicker(previewDocument);
       updateToolbarState();
       refreshSelectionOverlay();
+      appState.pendingSelection = null;
     }
 
     function initializePageModel(previewDocument) {
+      if (isRemarkMode()) {
+        initializeRemarkPageModel(previewDocument);
+        return;
+      }
+
       const body = previewDocument.body;
       const pages = findPageRoots(previewDocument);
 
@@ -1512,6 +1930,52 @@
       });
 
       applySlideTypographyBaseline(previewDocument, pages, shouldApplySlideTypographyBaseline(previewDocument, pages));
+    }
+
+    function initializeRemarkPageModel(previewDocument) {
+      const body = previewDocument.body;
+      body.setAttribute("data-editor-multipage", "true");
+      const pages = Array.from(previewDocument.querySelectorAll("[data-remark-slide-page='true']"));
+
+      previewDocument.querySelectorAll("[data-editor-page='true']").forEach((page) => {
+        page.removeAttribute("data-editor-page");
+        page.removeAttribute("data-editor-page-kind");
+        page.removeAttribute("data-editor-page-label");
+        page.removeAttribute("data-editor-page-active");
+      });
+
+      pages.forEach((page, index) => {
+        markPage(page, index, "remark");
+      });
+    }
+
+    function resolvePendingPage(previewDocument) {
+      const pending = appState.pendingSelection;
+      if (!pending) {
+        return null;
+      }
+
+      const pages = getPageElements(previewDocument);
+      if (!pages.length) {
+        return null;
+      }
+
+      if (pending.remarkSlideId) {
+        const match = pages.find((page) => page.getAttribute("data-remark-slide-id") === pending.remarkSlideId);
+        if (match) {
+          return match;
+        }
+      }
+
+      if (typeof pending.index === "number" && pending.index >= 0) {
+        return pages[Math.min(pending.index, pages.length - 1)] || null;
+      }
+
+      if (pending.pageId) {
+        return pages.find((page) => page.getAttribute("data-editor-page-id") === pending.pageId) || null;
+      }
+
+      return null;
     }
 
     function shouldApplySlideTypographyBaseline(previewDocument, pages) {
@@ -1593,7 +2057,7 @@
     function markPage(page, index, kind) {
       page.setAttribute("data-editor-page", "true");
       page.setAttribute("data-editor-page-kind", kind);
-      page.setAttribute("data-editor-page-label", `Page ${index + 1}`);
+      page.setAttribute("data-editor-page-label", `${isRemarkMode() ? "Slide" : "Page"} ${index + 1}`);
 
       if (!page.getAttribute("data-editor-page-id")) {
         appState.pageCounter += 1;
@@ -1663,7 +2127,7 @@
       }
 
       const text = element.textContent.replace(/\s+/g, " ").trim();
-      if (!text) {
+      if (!text && element.tagName !== "PRE" && element.tagName !== "CODE") {
         return false;
       }
 
@@ -1822,6 +2286,54 @@
           previewHint.textContent = "Tab stays inside the current text element so typing remains predictable.";
         }
       }
+
+      handleDeleteShortcut(event);
+    }
+
+    function handleAppKeydown(event) {
+      handleDeleteShortcut(event);
+    }
+
+    function handleDeleteShortcut(event) {
+      if (event.defaultPrevented || !isDeletionKey(event)) {
+        return;
+      }
+
+      if (shouldIgnoreDeleteShortcut(event)) {
+        return;
+      }
+
+      if (!canDeleteSelectedElement()) {
+        return;
+      }
+
+      event.preventDefault();
+      deleteSelectedElement();
+    }
+
+    function isDeletionKey(event) {
+      return event.key === "Delete" || event.key === "Backspace";
+    }
+
+    function shouldIgnoreDeleteShortcut(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return true;
+      }
+
+      const target = event.target;
+      if (!target || target.nodeType !== 1) {
+        return false;
+      }
+
+      if (target.matches("input, textarea, select")) {
+        return true;
+      }
+
+      if (target.isContentEditable) {
+        return true;
+      }
+
+      return false;
     }
 
     function handlePreviewMutation() {
@@ -1892,6 +2404,7 @@
       page.setAttribute("data-editor-page-active", "true");
 
       updatePagePicker(previewDocument);
+      updateToolbarState();
 
       if (options.scroll) {
         page.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1936,6 +2449,11 @@
         return null;
       }
 
+      if (isRemarkMode()) {
+        createNewRemarkSlide();
+        return null;
+      }
+
       initializePageModel(previewDocument);
       return previewDocument.body;
     }
@@ -1966,9 +2484,26 @@
     }
 
     function buildPageOptionLabel(page, index) {
+      const noun = isRemarkMode() ? "Slide" : "Page";
       const heading = page.querySelector("h1, h2, h3");
       const headingText = heading ? heading.textContent.replace(/\s+/g, " ").trim().slice(0, 28) : "";
-      return headingText ? `Page ${index + 1}: ${headingText}` : `Page ${index + 1}`;
+      return headingText ? `${noun} ${index + 1}: ${headingText}` : `${noun} ${index + 1}`;
+    }
+
+    function getActivePageIndex() {
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return 0;
+      }
+
+      const pages = getPageElements(previewDocument);
+      if (!pages.length) {
+        return 0;
+      }
+
+      const active = appState.selectedPage || pages[0];
+      const index = pages.indexOf(active);
+      return index >= 0 ? index : 0;
     }
 
     function scheduleOverlayRefresh() {
@@ -2156,6 +2691,46 @@
       return selectedElement && selectedElement.matches("img[data-editor-image='true']") ? selectedElement : null;
     }
 
+    function canDeleteSelectedElement() {
+      const element = appState.selectedElement;
+      if (!element || !element.ownerDocument) {
+        return false;
+      }
+
+      if (element === element.ownerDocument.body) {
+        return false;
+      }
+
+      if (element.closest("[data-editor-overlay-root='true']")) {
+        return false;
+      }
+
+      if (element.matches("[data-editor-page='true']")) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function canDeleteCurrentPage() {
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return false;
+      }
+
+      const pages = getPageElements(previewDocument);
+      if (pages.length <= 1) {
+        return false;
+      }
+
+      const page = ensureCurrentPage(previewDocument, false);
+      if (!page) {
+        return false;
+      }
+
+      return page !== previewDocument.body;
+    }
+
     function updateToolbarState() {
       const textTarget = getSelectedTextTarget();
       const imageTarget = getSelectedImageTarget();
@@ -2196,6 +2771,24 @@
         imageObjectFitControl.value = computed.objectFit || "fill";
         imageFilterControl.value = matchImageFilterPreset(imageTarget.style.filter || computed.filter);
       }
+
+      deleteElementButton.disabled = !canDeleteSelectedElement();
+      deletePageButton.disabled = !canDeleteCurrentPage();
+      deletePageButton.textContent = isRemarkMode() ? "Delete Slide" : "Delete Page";
+
+      updateRemarkMetadataControls();
+    }
+
+    function updateRemarkMetadataControls() {
+      if (!isRemarkMode()) {
+        slideClassControl.disabled = true;
+        slideClassControl.value = "";
+        return;
+      }
+
+      const slide = getCurrentRemarkSlide();
+      slideClassControl.disabled = !slide;
+      slideClassControl.value = slide ? getSlideDirectiveValue(slide, "class") : "";
     }
 
     function matchFontFamilyOption(computedFamily) {
@@ -2336,6 +2929,15 @@
     }
 
     function createNewPage() {
+      if (isRemarkMode()) {
+        createNewRemarkSlide();
+        return;
+      }
+
+      createNewHtmlPage();
+    }
+
+    function createNewHtmlPage() {
       const previewDocument = previewFrame.contentDocument;
       if (!previewDocument) {
         return;
@@ -2350,6 +2952,119 @@
       syncSourceFromPreview();
       editorStatus.textContent = "Added new page";
       previewHint.textContent = "The new page is ready. Add text or images to the current page, or drag selected elements into place.";
+    }
+
+    function createNewRemarkSlide() {
+      const slide = createRemarkSlide({
+        directives: [createRemarkDirective("class", "middle, center")],
+        bodySource: "# New Slide\n\nYour content here"
+      });
+
+      appState.documentModel.slides.push(slide);
+      appState.pendingSelection = { remarkSlideId: slide.id };
+      setSourceValue(buildRemarkDeckSource(appState.documentModel));
+      renderCurrentDocument();
+      editorStatus.textContent = "Added new slide";
+      previewHint.textContent = "The new slide is ready. Edit its class metadata in the toolbar or add visible content directly in the preview.";
+    }
+
+    function deleteSelectedElement() {
+      if (!canDeleteSelectedElement()) {
+        return;
+      }
+
+      const element = appState.selectedElement;
+      const page = getElementPage(element);
+      clearSelection(false);
+      element.remove();
+
+      if (page && page.isConnected) {
+        setCurrentPage(page, { scroll: false });
+      }
+
+      syncSourceFromPreview();
+      editorStatus.textContent = "Deleted selected element";
+      previewHint.textContent = "The selected element was removed and will not appear in export.";
+      updateToolbarState();
+      scheduleOverlayRefresh();
+    }
+
+    function deleteCurrentPage() {
+      if (!canDeleteCurrentPage()) {
+        editorStatus.textContent = isRemarkMode() ? "At least one slide must remain" : "At least one page must remain";
+        previewHint.textContent = "The final page is kept in place so the document stays valid.";
+        updateToolbarState();
+        return;
+      }
+
+      const noun = isRemarkMode() ? "slide" : "page";
+      if (!window.confirm(`Delete the current ${noun}?`)) {
+        return;
+      }
+
+      if (isRemarkMode()) {
+        deleteCurrentRemarkSlide();
+      } else {
+        deleteCurrentHtmlPage();
+      }
+    }
+
+    function deleteCurrentHtmlPage() {
+      const previewDocument = previewFrame.contentDocument;
+      const page = ensureCurrentPage(previewDocument, false);
+      if (!previewDocument || !page || page === previewDocument.body) {
+        return;
+      }
+
+      const pages = getPageElements(previewDocument);
+      const index = pages.indexOf(page);
+      const fallbackPage = pages[index + 1] || pages[index - 1] || null;
+
+      clearSelection(false);
+      page.remove();
+      initializePageModel(previewDocument);
+      markInteractiveNodes(previewDocument);
+
+      if (fallbackPage && fallbackPage.isConnected) {
+        setCurrentPage(fallbackPage, { scroll: false });
+      } else {
+        const nextPage = ensureCurrentPage(previewDocument, false);
+        if (nextPage) {
+          setCurrentPage(nextPage, { scroll: false });
+        }
+      }
+
+      syncSourceFromPreview();
+      editorStatus.textContent = "Deleted page";
+      previewHint.textContent = "The current page was removed and will not appear in export.";
+      updateToolbarState();
+      scheduleOverlayRefresh();
+    }
+
+    function deleteCurrentRemarkSlide() {
+      const currentSlide = getCurrentRemarkSlide();
+      if (!currentSlide) {
+        return;
+      }
+
+      const slides = appState.documentModel.slides;
+      const index = slides.findIndex((slide) => slide.id === currentSlide.id);
+      if (index === -1 || slides.length <= 1) {
+        return;
+      }
+
+      const fallbackSlide = slides[index + 1] || slides[index - 1] || null;
+      appState.documentModel.slides = slides.filter((slide) => slide.id !== currentSlide.id);
+      appState.pendingSelection = {
+        remarkSlideId: fallbackSlide?.id || null,
+        index: Math.max(0, Math.min(index, appState.documentModel.slides.length - 1))
+      };
+
+      clearSelection(false);
+      setSourceValue(buildRemarkDeckSource(appState.documentModel));
+      renderCurrentDocument();
+      editorStatus.textContent = "Deleted slide";
+      previewHint.textContent = "The current slide was removed from the deck and will not be included in export.";
     }
 
     function createBlankPageSection(previewDocument) {
@@ -2496,10 +3211,34 @@
         return;
       }
 
+      if (isRemarkMode()) {
+        syncRemarkSourceFromPreview(previewDocument);
+      } else {
+        syncNormalSourceFromPreview(previewDocument);
+      }
+    }
+
+    function syncNormalSourceFromPreview(previewDocument) {
       const workingHtml = serializePreviewDocument(previewDocument, false);
-      sourceInput.value = workingHtml;
-      updateSourceStats();
+      appState.documentModel.rawHtml = workingHtml;
+      setSourceValue(workingHtml);
       editorStatus.textContent = "Changes synced";
+    }
+
+    function syncRemarkSourceFromPreview(previewDocument) {
+      const slidePages = Array.from(previewDocument.querySelectorAll("[data-remark-slide-id]"));
+      const slideMap = new Map(appState.documentModel.slides.map((slide) => [slide.id, slide]));
+      const nextSlides = slidePages.map((page) => {
+        const slideId = page.getAttribute("data-remark-slide-id");
+        const slide = slideMap.get(slideId) || createRemarkSlide({});
+        slide.bodySource = serializeRemarkSlideBody(page);
+        return slide;
+      });
+
+      appState.documentModel.slides = nextSlides.length ? nextSlides : [createRemarkSlide({ bodySource: "" })];
+      setSourceValue(buildRemarkDeckSource(appState.documentModel));
+      editorStatus.textContent = "Slide source synced";
+      updateRemarkMetadataControls();
     }
 
     function serializePreviewDocument(previewDocument, forExport) {
@@ -2552,26 +3291,50 @@
     }
 
     function exportEditedPage() {
-      const previewDocument = previewFrame.contentDocument;
+      commitSourceInputToModel();
 
-      if (!previewDocument) {
-        return;
+      if (isRemarkMode()) {
+        exportRemarkDocument();
+      } else {
+        exportNormalDocument();
       }
+    }
 
-      const finalHtml = serializePreviewDocument(previewDocument, true);
-      const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
+    function exportNormalDocument() {
+      const rawHtml = appState.documentModel?.rawHtml || sourceInput.value || "";
+      const sanitized = sanitizeHtmlDocument(rawHtml);
+      const finalHtml = `${sanitized.doctype}\n${sanitized.document.documentElement.outerHTML}`;
+      triggerDownload(finalHtml, appState.exportFileName || "edited_presentation.html");
+      editorStatus.textContent = `Exported ${appState.exportFileName || "edited_presentation.html"}`;
+      previewHint.textContent = "The exported file preserves page structure, positions, inline styles, and content changes without editor-only UI.";
+    }
+
+    function exportRemarkDocument() {
+      const model = appState.documentModel;
+      const slideSource = buildRemarkDeckSource(model);
+      const textareaMarkup = buildRemarkTextareaMarkup(model, slideSource);
+      const htmlAttributes = model.htmlAttributes || ` lang="en"`;
+      const headHtml = model.headHtml || DEFAULT_REMARK_HEAD.trim();
+      const bodyTemplate = ensureRemarkPlaceholder(model.bodyTemplate || DEFAULT_REMARK_BODY);
+      const bodyHtml = bodyTemplate.replace(REMARK_PLACEHOLDER, textareaMarkup);
+      const finalHtml = `${model.doctype || "<!DOCTYPE html>"}\n<html${htmlAttributes}>\n<head>\n${headHtml}\n</head>\n<body>\n${bodyHtml}\n</body>\n</html>`;
+
+      triggerDownload(finalHtml, appState.exportFileName || "remark_deck.html");
+      editorStatus.textContent = `Exported ${appState.exportFileName || "remark_deck.html"}`;
+      previewHint.textContent = "The exported file is a remark-compatible slideshow wrapper with your updated slide source stored inside <textarea id=\"source\">.";
+    }
+
+    function triggerDownload(content, fileName) {
+      const blob = new Blob([content], { type: "text/html;charset=utf-8" });
       const downloadUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
 
       downloadLink.href = downloadUrl;
-      downloadLink.download = "edited_presentation.html";
+      downloadLink.download = fileName;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       downloadLink.remove();
       URL.revokeObjectURL(downloadUrl);
-
-      editorStatus.textContent = "Exported edited_presentation.html";
-      previewHint.textContent = "The exported file preserves page structure, positions, inline styles, and content changes without editor-only UI.";
     }
 
     function buildSanitizationLabel(stats) {
@@ -2598,6 +3361,543 @@
 
     function updateSourceStats() {
       sourceStats.textContent = `${sourceInput.value.length.toLocaleString()} characters`;
+    }
+
+    function handleSlideClassInput() {
+      if (!isRemarkMode()) {
+        return;
+      }
+
+      const slide = getCurrentRemarkSlide();
+      if (!slide) {
+        return;
+      }
+
+      setSlideDirectiveValue(slide, "class", slideClassControl.value, "class");
+      const page = findRemarkPageBySlideId(slide.id);
+      if (page) {
+        applyRemarkClassesToPage(page, getSlideDirectiveValue(slide, "class"));
+      }
+      setSourceValue(buildRemarkDeckSource(appState.documentModel));
+      editorStatus.textContent = "Updated slide class";
+      previewHint.textContent = "Slide-level classes now apply to the current preview page and are preserved on export.";
+    }
+
+    function detectRemarkHtml(rawHtml) {
+      if (!rawHtml || !/<textarea[^>]+id=["']source["']/i.test(rawHtml)) {
+        return false;
+      }
+
+      const parser = new DOMParser();
+      const documentNode = parser.parseFromString(rawHtml, "text/html");
+      if (!documentNode.querySelector("textarea#source")) {
+        return false;
+      }
+
+      const scripts = Array.from(documentNode.querySelectorAll("script")).map((script) => script.textContent || "");
+      return scripts.some((text) => /remark\.create\s*\(/.test(text)) || /remark\.create\s*\(/.test(rawHtml);
+    }
+
+    function createRemarkModelFromHtml(rawHtml) {
+      const parser = new DOMParser();
+      const documentNode = parser.parseFromString(rawHtml || "", "text/html");
+      ensureDocumentShape(documentNode);
+
+      const sourceTextarea = documentNode.querySelector("textarea#source");
+      const sourceValue = sourceTextarea ? sourceTextarea.value : DEFAULT_REMARK_SOURCE;
+
+      if (sourceTextarea) {
+        const placeholder = documentNode.createElement("remark-source-placeholder");
+        placeholder.setAttribute("data-editor-remark-source", "true");
+        sourceTextarea.replaceWith(placeholder);
+      }
+
+      const bodyTemplate = ensureRemarkPlaceholder(documentNode.body.innerHTML || DEFAULT_REMARK_BODY);
+      const htmlAttributes = serializeElementAttributes(documentNode.documentElement) || ` lang="en"`;
+      const textareaAttributes = sourceTextarea ? serializeElementAttributes(sourceTextarea) || ` id="source"` : ` id="source"`;
+
+      return {
+        mode: "remark-slideshow",
+        doctype: extractDoctype(rawHtml) || serializeDoctype(documentNode),
+        htmlAttributes,
+        headHtml: (documentNode.head.innerHTML || DEFAULT_REMARK_HEAD.trim()).trim(),
+        bodyTemplate,
+        textareaAttributes,
+        slides: parseRemarkDeckSource(sourceValue)
+      };
+    }
+
+    function ensureRemarkPlaceholder(bodyTemplate) {
+      if (bodyTemplate.includes(REMARK_PLACEHOLDER)) {
+        return bodyTemplate;
+      }
+
+      if (bodyTemplate.includes("data-editor-remark-source")) {
+        return bodyTemplate;
+      }
+
+      return `${REMARK_PLACEHOLDER}\n${bodyTemplate || DEFAULT_REMARK_BODY}`;
+    }
+
+    function serializeElementAttributes(element) {
+      if (!element) {
+        return "";
+      }
+
+      return Array.from(element.attributes).map((attribute) => {
+        return ` ${attribute.name}="${escapeHtmlAttribute(attribute.value)}"`;
+      }).join("");
+    }
+
+    function buildRemarkTextareaMarkup(model, slideSource) {
+      const attributes = model.textareaAttributes && /id\s*=\s*["']source["']/i.test(model.textareaAttributes)
+        ? model.textareaAttributes
+        : ` id="source"`;
+
+      return `<textarea${attributes}>${escapeTextareaContent(slideSource)}</textarea>`;
+    }
+
+    function escapeTextareaContent(source) {
+      return String(source || "").replace(/<\/textarea/gi, "<\\/textarea");
+    }
+
+    function parseRemarkDeckSource(source) {
+      const normalized = String(source || "").replace(/\r\n?/g, "\n");
+      const parts = normalized.split(/^\s*---\s*$/m);
+      const slides = parts.map((part) => parseRemarkSlide(part)).filter(Boolean);
+      return slides.length ? slides : [createRemarkSlide({ bodySource: "" })];
+    }
+
+    function parseRemarkSlide(block) {
+      const normalized = String(block || "").replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const directives = [];
+      let index = 0;
+
+      while (index < lines.length && REMARK_DIRECTIVE_PATTERN.test(lines[index])) {
+        const match = lines[index].match(REMARK_DIRECTIVE_PATTERN);
+        directives.push(createRemarkDirective(match[1], match[2].replace(/^\s*/, ""), lines[index]));
+        index += 1;
+      }
+
+      const bodyLines = lines.slice(index);
+      const bodySource = trimSurroundingBlankLines(bodyLines.join("\n"));
+      return createRemarkSlide({
+        directives,
+        bodySource
+      });
+    }
+
+    function trimSurroundingBlankLines(value) {
+      return String(value || "").replace(/^\n+/, "").replace(/\n+$/, "");
+    }
+
+    function createRemarkSlide(options = {}) {
+      appState.remarkSlideCounter += 1;
+      return {
+        id: options.id || `remark-slide-${appState.remarkSlideCounter}`,
+        directives: Array.isArray(options.directives) ? options.directives.map(normalizeRemarkDirective) : [],
+        bodySource: options.bodySource || ""
+      };
+    }
+
+    function normalizeRemarkDirective(directive) {
+      if (directive && directive.key) {
+        return {
+          key: directive.key.toLowerCase(),
+          label: directive.label || directive.key,
+          value: directive.value || "",
+          raw: directive.raw || `${directive.label || directive.key}: ${directive.value || ""}`,
+          dirty: Boolean(directive.dirty)
+        };
+      }
+
+      return createRemarkDirective("class", "");
+    }
+
+    function createRemarkDirective(key, value, raw) {
+      const label = String(key || "class");
+      return {
+        key: label.toLowerCase(),
+        label,
+        value: String(value || ""),
+        raw: raw || `${label}: ${String(value || "")}`,
+        dirty: !raw
+      };
+    }
+
+    function ensureRemarkSlidesExist(model) {
+      if (!model.slides || !model.slides.length) {
+        model.slides = parseRemarkDeckSource(DEFAULT_REMARK_SOURCE);
+      }
+    }
+
+    function buildRemarkDeckSource(model) {
+      return model.slides.map((slide) => buildRemarkSlideSource(slide)).join("\n\n---\n\n");
+    }
+
+    function buildRemarkSlideSource(slide) {
+      const metadataLines = slide.directives.map(serializeRemarkDirective).filter(Boolean);
+      const body = trimSurroundingBlankLines(slide.bodySource || "");
+
+      if (metadataLines.length && body) {
+        return `${metadataLines.join("\n")}\n\n${body}`;
+      }
+
+      if (metadataLines.length) {
+        return metadataLines.join("\n");
+      }
+
+      return body;
+    }
+
+    function serializeRemarkDirective(directive) {
+      if (!directive) {
+        return "";
+      }
+
+      if (!directive.dirty && directive.raw) {
+        return directive.raw;
+      }
+
+      return `${directive.label || directive.key}: ${directive.value || ""}`;
+    }
+
+    function getSlideDirectiveValue(slide, key) {
+      const directive = slide?.directives.find((item) => item.key === key.toLowerCase());
+      return directive ? directive.value : "";
+    }
+
+    function setSlideDirectiveValue(slide, key, value, label = key) {
+      if (!slide) {
+        return;
+      }
+
+      const normalizedKey = key.toLowerCase();
+      const trimmedValue = String(value || "").trim();
+      const existing = slide.directives.find((item) => item.key === normalizedKey);
+
+      if (!trimmedValue) {
+        slide.directives = slide.directives.filter((item) => item.key !== normalizedKey);
+        return;
+      }
+
+      if (existing) {
+        existing.value = trimmedValue;
+        existing.label = existing.label || label;
+        existing.raw = `${existing.label}: ${trimmedValue}`;
+        existing.dirty = true;
+        return;
+      }
+
+      slide.directives.unshift({
+        key: normalizedKey,
+        label,
+        value: trimmedValue,
+        raw: `${label}: ${trimmedValue}`,
+        dirty: true
+      });
+    }
+
+    function getCurrentRemarkSlide() {
+      if (!isRemarkMode()) {
+        return null;
+      }
+
+      const activeId = appState.selectedPage?.getAttribute("data-remark-slide-id");
+      if (activeId) {
+        return appState.documentModel.slides.find((slide) => slide.id === activeId) || null;
+      }
+
+      return appState.documentModel.slides[0] || null;
+    }
+
+    function findRemarkPageBySlideId(slideId) {
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return null;
+      }
+
+      return Array.from(previewDocument.querySelectorAll("[data-remark-slide-id]")).find((page) => {
+        return page.getAttribute("data-remark-slide-id") === slideId;
+      }) || null;
+    }
+
+    function extractRemarkClasses(value) {
+      return String(value || "")
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .flatMap((part) => part.split(/\s+/))
+        .filter(Boolean);
+    }
+
+    function applyRemarkClassesToPage(page, classValue) {
+      page.className = "remark-editor-slide";
+      extractRemarkClasses(classValue).forEach((className) => {
+        page.classList.add(className);
+      });
+    }
+
+    function renderRemarkSlideBody(source) {
+      const normalized = String(source || "").replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const blocks = [];
+      let index = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+
+        if (!line.trim()) {
+          index += 1;
+          continue;
+        }
+
+        if (/^```/.test(line.trim())) {
+          const language = line.trim().slice(3).trim();
+          const codeLines = [];
+          index += 1;
+
+          while (index < lines.length && !/^```/.test(lines[index].trim())) {
+            codeLines.push(lines[index]);
+            index += 1;
+          }
+
+          if (index < lines.length) {
+            index += 1;
+          }
+
+          blocks.push(`<pre data-remark-block="code" data-remark-language="${escapeHtmlAttribute(language)}"><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+          continue;
+        }
+
+        const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          blocks.push(`<h${level} data-remark-block="heading" data-remark-level="${level}">${renderInlineMarkup(headingMatch[2])}</h${level}>`);
+          index += 1;
+          continue;
+        }
+
+        if (isRemarkListLine(line)) {
+          const listStart = line.match(/^\s*(\d+\.)\s+/) ? "ol" : "ul";
+          const items = [];
+
+          while (index < lines.length && isRemarkListLine(lines[index])) {
+            const itemLine = lines[index].replace(/^\s*(?:[-*+]|\d+\.)\s+/, "");
+            items.push(`<li>${renderInlineMarkup(itemLine)}</li>`);
+            index += 1;
+          }
+
+          blocks.push(`<${listStart} data-remark-block="list" data-remark-list-kind="${listStart}">${items.join("")}</${listStart}>`);
+          continue;
+        }
+
+        if (/^\s*</.test(line)) {
+          const htmlLines = [];
+          while (index < lines.length && lines[index].trim()) {
+            htmlLines.push(lines[index]);
+            index += 1;
+          }
+
+          blocks.push(sanitizeHtmlFragment(htmlLines.join("\n")).html);
+          continue;
+        }
+
+        const paragraphLines = [];
+        while (index < lines.length && lines[index].trim() && !/^(#{1,3})\s+/.test(lines[index]) && !/^```/.test(lines[index].trim()) && !isRemarkListLine(lines[index]) && !/^\s*</.test(lines[index])) {
+          paragraphLines.push(lines[index]);
+          index += 1;
+        }
+
+        blocks.push(`<p data-remark-block="paragraph">${paragraphLines.map((part) => renderInlineMarkup(part)).join("<br>")}</p>`);
+      }
+
+      return blocks.join("\n");
+    }
+
+    function isRemarkListLine(line) {
+      return /^\s*(?:[-*+]|\d+\.)\s+/.test(line);
+    }
+
+    function renderInlineMarkup(text) {
+      let markup = String(text || "");
+      markup = markup.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
+        return `<img alt="${escapeHtmlAttribute(alt)}" src="${escapeHtmlAttribute(src)}">`;
+      });
+
+      markup = markup.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
+        return `<a href="${escapeHtmlAttribute(href)}">${escapeHtml(label)}</a>`;
+      });
+
+      markup = markup.replace(/`([^`]+)`/g, (_, code) => {
+        return `<code>${escapeHtml(code)}</code>`;
+      });
+
+      return sanitizeHtmlFragment(markup).html;
+    }
+
+    function serializeRemarkSlideBody(page) {
+      const parts = [];
+
+      Array.from(page.childNodes).forEach((node) => {
+        const serialized = serializeRemarkSlideNode(node);
+        if (serialized) {
+          parts.push(serialized);
+        }
+      });
+
+      return trimSurroundingBlankLines(parts.join("\n\n"));
+    }
+
+    function serializeRemarkSlideNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent.trim();
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return "";
+      }
+
+      const element = node;
+      const cleaned = cloneForRemarkSource(element);
+      const tagName = cleaned.tagName;
+
+      if (cleaned.hasAttribute("data-remark-empty")) {
+        return "";
+      }
+
+      if (cleaned.style.position === "absolute" || cleaned.hasAttribute("data-builder-node")) {
+        cleaned.removeAttribute("data-builder-node");
+        return cleaned.outerHTML;
+      }
+
+      if (/^H[1-3]$/.test(tagName) && canSerializeSimpleTextBlock(cleaned)) {
+        const level = Number(tagName.slice(1));
+        return `${"#".repeat(level)} ${serializePlainTextWithBreaks(cleaned).replace(/\n/g, " ").trim()}`;
+      }
+
+      if (tagName === "P") {
+        if (canSerializeSimpleImageParagraph(cleaned)) {
+          const image = cleaned.querySelector("img");
+          return `![${image.getAttribute("alt") || ""}](${image.getAttribute("src") || ""})`;
+        }
+
+        if (canSerializeSimpleTextBlock(cleaned)) {
+          return serializePlainTextWithBreaks(cleaned);
+        }
+
+        return cleaned.outerHTML;
+      }
+
+      if ((tagName === "UL" || tagName === "OL") && canSerializeSimpleList(cleaned)) {
+        return Array.from(cleaned.children).map((item, index) => {
+          const prefix = tagName === "OL" ? `${index + 1}.` : "-";
+          return `${prefix} ${serializePlainTextWithBreaks(item).replace(/\n/g, " ").trim()}`;
+        }).join("\n");
+      }
+
+      if (tagName === "PRE" && canSerializeSimpleCodeBlock(cleaned)) {
+        const code = cleaned.querySelector("code");
+        return `\`\`\`\n${code.textContent.replace(/\n+$/, "")}\n\`\`\``;
+      }
+
+      if (tagName === "IMG" && canSerializeSimpleStandaloneImage(cleaned)) {
+        return `![${cleaned.getAttribute("alt") || ""}](${cleaned.getAttribute("src") || ""})`;
+      }
+
+      return cleaned.outerHTML;
+    }
+
+    function cloneForRemarkSource(element) {
+      const clone = element.cloneNode(true);
+      clone.querySelectorAll("*").forEach((node) => {
+        finalizeClonedTransform(node);
+      });
+      finalizeClonedTransform(clone);
+
+      const nodes = [clone, ...clone.querySelectorAll("*")];
+      nodes.forEach((node) => {
+        node.removeAttribute("contenteditable");
+        node.removeAttribute("spellcheck");
+        Array.from(node.attributes).forEach((attribute) => {
+          if (attribute.name.startsWith("data-editor-") || attribute.name.startsWith("data-builder-")) {
+            node.removeAttribute(attribute.name);
+          }
+        });
+      });
+
+      return clone;
+    }
+
+    function canSerializeSimpleTextBlock(element) {
+      if (hasNonTrivialAttributes(element)) {
+        return false;
+      }
+
+      return Array.from(element.childNodes).every((child) => {
+        return child.nodeType === Node.TEXT_NODE || (child.nodeType === Node.ELEMENT_NODE && child.tagName === "BR");
+      });
+    }
+
+    function canSerializeSimpleList(element) {
+      if (hasNonTrivialAttributes(element)) {
+        return false;
+      }
+
+      return Array.from(element.children).every((child) => {
+        return child.tagName === "LI" && canSerializeSimpleTextBlock(child);
+      });
+    }
+
+    function canSerializeSimpleCodeBlock(element) {
+      if (hasNonTrivialAttributes(element)) {
+        return false;
+      }
+
+      const code = element.querySelector("code");
+      return Boolean(code && element.children.length === 1 && !hasNonTrivialAttributes(code));
+    }
+
+    function canSerializeSimpleStandaloneImage(element) {
+      return !hasNonTrivialAttributes(element, ["src", "alt"]);
+    }
+
+    function canSerializeSimpleImageParagraph(element) {
+      if (hasNonTrivialAttributes(element)) {
+        return false;
+      }
+
+      return element.children.length === 1 && element.firstElementChild.tagName === "IMG" && canSerializeSimpleStandaloneImage(element.firstElementChild);
+    }
+
+    function hasNonTrivialAttributes(element, allowedAttributes = []) {
+      return Array.from(element.attributes).some((attribute) => {
+        return !allowedAttributes.includes(attribute.name);
+      });
+    }
+
+    function serializePlainTextWithBreaks(element) {
+      return Array.from(element.childNodes).map((child) => {
+        if (child.nodeType === Node.TEXT_NODE) {
+          return child.textContent;
+        }
+
+        return child.tagName === "BR" ? "\n" : "";
+      }).join("").trim();
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeHtmlAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
     }
 
     initialize();
