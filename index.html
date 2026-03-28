@@ -96,7 +96,7 @@
 
     .topbar {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       min-width: 0;
       padding: 0.5rem 0.75rem;
       background: rgba(10, 16, 27, 0.08);
@@ -126,17 +126,45 @@
     }
 
     .toolbar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-rows: repeat(2, minmax(0, auto));
       gap: 0.45rem;
       width: 100%;
       min-width: 0;
     }
 
+    .toolbar__row {
+      display: flex;
+      align-items: stretch;
+      gap: 0.45rem;
+      min-width: 0;
+      min-height: calc(var(--control-height) + 0.6rem);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-strong) transparent;
+    }
+
+    .toolbar__row::-webkit-scrollbar {
+      height: 0.45rem;
+    }
+
+    .toolbar__row::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 999px;
+    }
+
+    .toolbar__row::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .toolbar__row > * {
+      flex: 0 0 auto;
+    }
+
     .toolbar__group {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.35rem;
       align-items: center;
       padding: 0.25rem;
@@ -145,10 +173,15 @@
       background: var(--panel);
       box-shadow: var(--shadow-soft);
       min-width: 0;
+      flex: 0 0 auto;
     }
 
     .toolbar__group[hidden] {
       display: none;
+    }
+
+    .toolbar__group--status {
+      margin-left: auto;
     }
 
     [hidden] {
@@ -156,9 +189,9 @@
     }
 
     #pageControlsGroup {
-      flex: 1 1 24rem;
-      min-width: min(100%, 16rem);
-      max-width: 34rem;
+      flex: 0 0 clamp(14rem, 24vw, 22rem);
+      min-width: 14rem;
+      max-width: none;
     }
 
     #pageControlsGroup .toolbar-control {
@@ -189,6 +222,7 @@
       font-size: 0.8rem;
       line-height: 1;
       cursor: pointer;
+      white-space: nowrap;
       transition:
         transform 160ms ease,
         background-color 160ms ease,
@@ -263,6 +297,7 @@
       font-size: 0.74rem;
       line-height: 1;
       min-width: 0;
+      flex: 0 0 auto;
     }
 
     .toolbar-control span {
@@ -286,11 +321,11 @@
     }
 
     .toolbar-control input[type="number"] {
-      width: 4.35rem;
+      width: 4rem;
     }
 
     .toolbar-control input[type="text"] {
-      width: 10rem;
+      width: 8.5rem;
     }
 
     .toolbar-control input[type="color"] {
@@ -302,11 +337,16 @@
     }
 
     .toolbar-control select {
-      max-width: 10rem;
+      max-width: 8.75rem;
     }
 
     .toolbar-control--wide select {
-      min-width: 7.4rem;
+      min-width: 6.8rem;
+    }
+
+    #textControlsGroup,
+    #imageControlsGroup {
+      min-width: max-content;
     }
 
     .workspace {
@@ -538,8 +578,7 @@
 
     @media (max-width: 1260px) {
       #pageControlsGroup {
-        flex-basis: 22rem;
-        max-width: 100%;
+        flex-basis: 18rem;
       }
     }
 
@@ -548,13 +587,14 @@
         padding: 0.45rem 0.55rem;
       }
 
-      .toolbar {
+      .toolbar,
+      .toolbar__row {
         gap: 0.35rem;
       }
 
       #pageControlsGroup {
-        flex-basis: 100%;
-        min-width: 0;
+        flex-basis: 13rem;
+        min-width: 13rem;
       }
 
       .workspace {
@@ -598,148 +638,152 @@
   <div class="app">
     <header class="topbar">
       <div class="toolbar" aria-label="Editor toolbar">
-        <span class="toolbar__label">Live HTML Editor</span>
+        <div class="toolbar__row toolbar__row--primary">
+          <span class="toolbar__label">Live HTML Editor</span>
 
-        <div class="toolbar__group">
-          <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
-          <button class="ghost-button" id="importHtmlButton" type="button">Import HTML</button>
-          <button class="ghost-button" id="newHtmlButton" type="button">New HTML</button>
-          <button class="ghost-button" id="newRemarkButton" type="button">New Remark Deck</button>
-          <button class="ghost-button" id="newPageButton" type="button">New Page</button>
-          <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
-          <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
-          <button class="primary-button" id="exportButton" type="button">Export HTML</button>
+          <div class="toolbar__group">
+            <button class="ghost-button" id="toggleSourceButton" type="button" aria-expanded="true" aria-controls="sourcePanel">Hide Source</button>
+            <button class="ghost-button" id="importHtmlButton" type="button">Import HTML</button>
+            <button class="ghost-button" id="newHtmlButton" type="button">New HTML</button>
+            <button class="ghost-button" id="newRemarkButton" type="button">New Remark Deck</button>
+            <button class="ghost-button" id="newPageButton" type="button">New Page</button>
+            <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
+            <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
+            <button class="primary-button" id="exportButton" type="button">Export HTML</button>
+          </div>
+
+          <div class="toolbar__group toolbar__group--status">
+            <span class="helper-pill" id="modeBadge">Mode: Normal HTML</span>
+          </div>
         </div>
 
-        <div class="toolbar__group">
-          <span class="helper-pill" id="modeBadge">Mode: Normal HTML</span>
-        </div>
+        <div class="toolbar__row toolbar__row--context">
+          <div class="toolbar__group" id="pageControlsGroup">
+            <label class="toolbar-control toolbar-control--wide">
+              <span id="pageSelectLabel">Page</span>
+              <select id="pageSelect"></select>
+            </label>
+          </div>
 
-        <div class="toolbar__group" id="pageControlsGroup">
-          <label class="toolbar-control toolbar-control--wide">
-            <span id="pageSelectLabel">Page</span>
-            <select id="pageSelect"></select>
-          </label>
-        </div>
+          <div class="toolbar__group" id="deleteControlsGroup">
+            <button class="ghost-button" id="deleteElementButton" type="button" disabled>Delete Element</button>
+            <button class="ghost-button" id="deletePageButton" type="button" disabled>Delete Page</button>
+          </div>
 
-        <div class="toolbar__group" id="deleteControlsGroup">
-          <button class="ghost-button" id="deleteElementButton" type="button" disabled>Delete Element</button>
-          <button class="ghost-button" id="deletePageButton" type="button" disabled>Delete Page</button>
-        </div>
+          <div class="toolbar__group" id="remarkMetaGroup" hidden>
+            <label class="toolbar-control">
+              <span>Class</span>
+              <input id="slideClassControl" type="text" placeholder="middle, center" spellcheck="false">
+            </label>
+          </div>
 
-        <div class="toolbar__group" id="remarkMetaGroup" hidden>
-          <label class="toolbar-control">
-            <span>Class</span>
-            <input id="slideClassControl" type="text" placeholder="middle, center" spellcheck="false">
-          </label>
-        </div>
+          <div class="toolbar__group" id="textControlsGroup" hidden>
+            <label class="toolbar-control toolbar-control--wide">
+              <span>Font</span>
+              <select id="fontFamilyControl">
+                <option value="Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif">Aptos</option>
+                <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Trebuchet</option>
+                <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier</option>
+                <option value="inherit">Inherit</option>
+              </select>
+            </label>
 
-        <div class="toolbar__group" id="presenterViewGroup" hidden>
-          <button class="toolbar-toggle" id="presenterViewButton" type="button" aria-pressed="false">Presenter View</button>
-        </div>
+            <label class="toolbar-control">
+              <span>Size</span>
+              <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
+            </label>
 
-        <div class="toolbar__group" id="textControlsGroup">
-          <label class="toolbar-control toolbar-control--wide">
-            <span>Font</span>
-            <select id="fontFamilyControl">
-              <option value="Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif">Aptos</option>
-              <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Trebuchet</option>
-              <option value="Georgia, 'Times New Roman', serif">Georgia</option>
-              <option value="'Courier New', monospace">Courier</option>
-              <option value="inherit">Inherit</option>
-            </select>
-          </label>
+            <label class="toolbar-control">
+              <span>Weight</span>
+              <select id="fontWeightControl">
+                <option value="400">400</option>
+                <option value="500">500</option>
+                <option value="600">600</option>
+                <option value="700">700</option>
+                <option value="800">800</option>
+              </select>
+            </label>
 
-          <label class="toolbar-control">
-            <span>Size</span>
-            <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
-          </label>
+            <label class="toolbar-control">
+              <span>Text</span>
+              <input id="textColorControl" type="color" value="#14213d">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Weight</span>
-            <select id="fontWeightControl">
-              <option value="400">400</option>
-              <option value="500">500</option>
-              <option value="600">600</option>
-              <option value="700">700</option>
-              <option value="800">800</option>
-            </select>
-          </label>
+            <label class="toolbar-control">
+              <span>Bg</span>
+              <input id="backgroundColorControl" type="color" value="#ffffff">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Text</span>
-            <input id="textColorControl" type="color" value="#14213d">
-          </label>
+            <label class="toolbar-control">
+              <span>Align</span>
+              <select id="textAlignControl">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+                <option value="justify">Justify</option>
+              </select>
+            </label>
 
-          <label class="toolbar-control">
-            <span>Bg</span>
-            <input id="backgroundColorControl" type="color" value="#ffffff">
-          </label>
+            <button class="toolbar-toggle" id="italicButton" type="button" aria-pressed="false">Italic</button>
+            <button class="toolbar-toggle" id="underlineButton" type="button" aria-pressed="false">Underline</button>
+          </div>
 
-          <label class="toolbar-control">
-            <span>Align</span>
-            <select id="textAlignControl">
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-              <option value="justify">Justify</option>
-            </select>
-          </label>
+          <div class="toolbar__group" id="imageControlsGroup" hidden>
+            <button class="ghost-button" id="replaceImageButton" type="button">Replace</button>
 
-          <button class="toolbar-toggle" id="italicButton" type="button" aria-pressed="false">Italic</button>
-          <button class="toolbar-toggle" id="underlineButton" type="button" aria-pressed="false">Underline</button>
-        </div>
+            <label class="toolbar-control">
+              <span>Width</span>
+              <input id="imageWidthControl" type="number" min="1" step="1" value="320">
+            </label>
 
-        <div class="toolbar__group" id="imageControlsGroup" hidden>
-          <button class="ghost-button" id="replaceImageButton" type="button">Replace</button>
+            <label class="toolbar-control">
+              <span>Height</span>
+              <input id="imageHeightControl" type="number" min="1" step="1" value="220">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Width</span>
-            <input id="imageWidthControl" type="number" min="1" step="1" value="320">
-          </label>
+            <label class="toolbar-control">
+              <span>Radius</span>
+              <input id="imageRadiusControl" type="number" min="0" step="1" value="20">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Height</span>
-            <input id="imageHeightControl" type="number" min="1" step="1" value="220">
-          </label>
+            <label class="toolbar-control">
+              <span>Opacity</span>
+              <input id="imageOpacityControl" type="number" min="0" max="100" step="1" value="100">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Radius</span>
-            <input id="imageRadiusControl" type="number" min="0" step="1" value="20">
-          </label>
+            <label class="toolbar-control">
+              <span>Rotate</span>
+              <input id="imageRotateControl" type="number" min="-360" max="360" step="1" value="0">
+            </label>
 
-          <label class="toolbar-control">
-            <span>Opacity</span>
-            <input id="imageOpacityControl" type="number" min="0" max="100" step="1" value="100">
-          </label>
+            <label class="toolbar-control">
+              <span>Fit</span>
+              <select id="imageObjectFitControl">
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+                <option value="fill">Fill</option>
+                <option value="none">None</option>
+                <option value="scale-down">Scale Down</option>
+              </select>
+            </label>
 
-          <label class="toolbar-control">
-            <span>Rotate</span>
-            <input id="imageRotateControl" type="number" min="-360" max="360" step="1" value="0">
-          </label>
+            <label class="toolbar-control">
+              <span>Filter</span>
+              <select id="imageFilterControl">
+                <option value="none">None</option>
+                <option value="soft">Soft</option>
+                <option value="dramatic">Dramatic</option>
+                <option value="grayscale">Grayscale</option>
+                <option value="warm">Warm</option>
+                <option value="cool">Cool</option>
+              </select>
+            </label>
+          </div>
 
-          <label class="toolbar-control">
-            <span>Fit</span>
-            <select id="imageObjectFitControl">
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="fill">Fill</option>
-              <option value="none">None</option>
-              <option value="scale-down">Scale Down</option>
-            </select>
-          </label>
-
-          <label class="toolbar-control">
-            <span>Filter</span>
-            <select id="imageFilterControl">
-              <option value="none">None</option>
-              <option value="soft">Soft</option>
-              <option value="dramatic">Dramatic</option>
-              <option value="grayscale">Grayscale</option>
-              <option value="warm">Warm</option>
-              <option value="cool">Cool</option>
-            </select>
-          </label>
+          <div class="toolbar__group" id="presenterViewGroup" hidden>
+            <button class="toolbar-toggle" id="presenterViewButton" type="button" aria-pressed="false">Presenter View</button>
+          </div>
         </div>
       </div>
     </header>
