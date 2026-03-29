@@ -2728,7 +2728,8 @@ Edit the slide source on the left, or add text and images directly in the previe
         const selectedSlide = getCurrentRemarkSlide();
         appState.pendingSelection = {
           remarkSlideId: selectedSlide?.id || null,
-          index: getActivePageIndex()
+          index: getActivePageIndex(),
+          previewScrollState: capturePreviewScrollState()
         };
         appState.documentModel.slides = parseRemarkDeckSource(rawValue);
         ensureRemarkSlidesExist(appState.documentModel);
@@ -3344,6 +3345,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       ensureEditorOverlay(previewDocument);
       bindPreviewEvents(previewDocument);
 
+      const pendingSelection = appState.pendingSelection;
       const initialPage = resolvePendingPage(previewDocument) || ensureCurrentPage(previewDocument, true);
       if (initialPage) {
         setCurrentPage(initialPage, { scroll: false });
@@ -3352,6 +3354,12 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       updatePagePicker(previewDocument);
       updateToolbarState();
       applyPreviewZoom({ preserveScroll: false });
+      if (pendingSelection?.previewScrollState) {
+        window.requestAnimationFrame(() => {
+          restorePreviewScrollState(pendingSelection.previewScrollState);
+          scheduleOverlayRefresh();
+        });
+      }
       refreshSelectionOverlay();
       appState.pendingSelection = null;
     }
@@ -3952,6 +3960,42 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
     }
 
+    function getActivePage(previewDocument) {
+      if (!previewDocument) {
+        return null;
+      }
+
+      if (appState.selectedPage && appState.selectedPage.ownerDocument === previewDocument && previewDocument.contains(appState.selectedPage)) {
+        return appState.selectedPage;
+      }
+
+      if (appState.selectedElement) {
+        const selectedElementPage = getElementPage(appState.selectedElement);
+        if (selectedElementPage && selectedElementPage.ownerDocument === previewDocument && previewDocument.contains(selectedElementPage)) {
+          return selectedElementPage;
+        }
+      }
+
+      return getPageElements(previewDocument)[0] || null;
+    }
+
+    function resolvePageAfterDeletion(pages, deletedPage, currentPage) {
+      if (!Array.isArray(pages) || !pages.length || !deletedPage) {
+        return null;
+      }
+
+      if (currentPage && currentPage !== deletedPage && pages.includes(currentPage)) {
+        return currentPage;
+      }
+
+      const deletedIndex = pages.indexOf(deletedPage);
+      if (deletedIndex === -1) {
+        return currentPage && pages.includes(currentPage) ? currentPage : pages[0] || null;
+      }
+
+      return pages[deletedIndex + 1] || pages[deletedIndex - 1] || null;
+    }
+
     function getPageElements(previewDocument) {
       return Array.from(previewDocument.querySelectorAll("[data-editor-page='true']"));
     }
@@ -3970,20 +4014,9 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return null;
       }
 
-      if (appState.selectedElement) {
-        const selectedPage = getElementPage(appState.selectedElement);
-        if (selectedPage) {
-          return selectedPage;
-        }
-      }
-
-      if (appState.selectedPage && appState.selectedPage.ownerDocument === previewDocument && previewDocument.contains(appState.selectedPage)) {
-        return appState.selectedPage;
-      }
-
-      const pages = getPageElements(previewDocument);
-      if (pages.length) {
-        return pages[0];
+      const activePage = getActivePage(previewDocument);
+      if (activePage) {
+        return activePage;
       }
 
       if (!createIfMissing) {
@@ -4005,7 +4038,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       const pages = getPageElements(previewDocument);
-      const activeId = appState.selectedPage?.getAttribute("data-editor-page-id") || pages[0]?.getAttribute("data-editor-page-id") || "";
+      const activePage = getActivePage(previewDocument);
+      const activeId = activePage?.getAttribute("data-editor-page-id") || pages[0]?.getAttribute("data-editor-page-id") || "";
 
       pageSelect.innerHTML = "";
 
@@ -4042,7 +4076,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return 0;
       }
 
-      const active = appState.selectedPage || pages[0];
+      const active = getActivePage(previewDocument) || pages[0];
       const index = pages.indexOf(active);
       return index >= 0 ? index : 0;
     }
@@ -4522,17 +4556,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return false;
       }
 
-      const pages = getPageElements(previewDocument);
-      if (pages.length <= 1) {
-        return false;
-      }
-
       const page = ensureCurrentPage(previewDocument, false);
-      if (!page) {
-        return false;
-      }
-
-      return page !== previewDocument.body;
+      return Boolean(page);
     }
 
     function updateToolbarState() {
@@ -4864,8 +4889,6 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function deleteCurrentPage() {
       if (!canDeleteCurrentPage()) {
-        editorStatus.textContent = isRemarkMode() ? "At least one slide must remain" : "At least one page must remain";
-        setPreviewHint("The final page is kept in place so the document stays valid.");
         updateToolbarState();
         return;
       }
@@ -4884,60 +4907,101 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function deleteCurrentHtmlPage() {
       const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return;
+      }
+
       const page = ensureCurrentPage(previewDocument, false);
-      if (!previewDocument || !page || page === previewDocument.body) {
+      if (!page) {
         return;
       }
 
       const pages = getPageElements(previewDocument);
-      const index = pages.indexOf(page);
-      const fallbackPage = pages[index + 1] || pages[index - 1] || null;
+      const currentPage = getActivePage(previewDocument);
+      const fallbackPage = resolvePageAfterDeletion(pages, page, currentPage);
+      const shouldClearSelection = Boolean(appState.selectedElement) && getElementPage(appState.selectedElement) === page;
 
-      clearSelection(false);
-      page.remove();
+      if (shouldClearSelection) {
+        clearSelection(false);
+      }
+
+      if (page === previewDocument.body) {
+        previewDocument.body.replaceChildren();
+      } else {
+        page.remove();
+      }
+
       initializePageModel(previewDocument);
+      let nextPage = fallbackPage && fallbackPage.isConnected ? fallbackPage : getActivePage(previewDocument);
+
+      if ((!nextPage || nextPage === previewDocument.body) &&
+        !previewDocument.body.children.length &&
+        !previewDocument.body.textContent.trim()) {
+        previewDocument.body.replaceChildren();
+        nextPage = createBlankPageSection(previewDocument);
+        previewDocument.body.appendChild(nextPage);
+        initializePageModel(previewDocument);
+      }
+
       markInteractiveNodes(previewDocument);
 
-      if (fallbackPage && fallbackPage.isConnected) {
-        setCurrentPage(fallbackPage, { scroll: false });
-      } else {
-        const nextPage = ensureCurrentPage(previewDocument, false);
-        if (nextPage) {
-          setCurrentPage(nextPage, { scroll: false });
-        }
+      if (nextPage && nextPage.isConnected) {
+        setCurrentPage(nextPage, { scroll: false });
       }
 
       syncSourceFromPreview();
-      editorStatus.textContent = "Deleted page";
-      setPreviewHint("The current page was removed and will not appear in export.");
+      editorStatus.textContent = pages.length <= 1 ? "Reset page" : "Deleted page";
+      setPreviewHint("The editor stayed on the nearest remaining page so your place is preserved.");
       updateToolbarState();
       scheduleOverlayRefresh();
     }
 
     function deleteCurrentRemarkSlide() {
-      const currentSlide = getCurrentRemarkSlide();
-      if (!currentSlide) {
+      const slides = appState.documentModel?.slides || [];
+      if (!slides.length) {
         return;
       }
 
-      const slides = appState.documentModel.slides;
-      const index = slides.findIndex((slide) => slide.id === currentSlide.id);
-      if (index === -1 || slides.length <= 1) {
+      const currentSlide = getCurrentRemarkSlide() || slides[0];
+      const targetSlide = currentSlide;
+      const targetIndex = slides.findIndex((slide) => slide.id === targetSlide.id);
+      if (targetIndex === -1) {
         return;
       }
 
-      const fallbackSlide = slides[index + 1] || slides[index - 1] || null;
-      appState.documentModel.slides = slides.filter((slide) => slide.id !== currentSlide.id);
-      appState.pendingSelection = {
-        remarkSlideId: fallbackSlide?.id || null,
-        index: Math.max(0, Math.min(index, appState.documentModel.slides.length - 1))
-      };
+      const previewScrollState = capturePreviewScrollState();
+      const nextSlide = targetSlide.id !== currentSlide.id
+        ? currentSlide
+        : slides[targetIndex + 1] || slides[targetIndex - 1] || null;
 
       clearSelection(false);
+
+      if (slides.length <= 1) {
+        const replacementSlide = createEmptyRemarkSlide();
+        appState.documentModel.slides = [replacementSlide];
+        appState.pendingSelection = {
+          remarkSlideId: replacementSlide.id,
+          index: 0,
+          previewScrollState
+        };
+        setSourceValue(buildRemarkDeckSource(appState.documentModel));
+        renderCurrentDocument();
+        editorStatus.textContent = "Reset slide";
+        setPreviewHint("The final slide was replaced with a new blank slide so your deck stays editable.");
+        return;
+      }
+
+      appState.documentModel.slides = slides.filter((slide) => slide.id !== targetSlide.id);
+      appState.pendingSelection = {
+        remarkSlideId: nextSlide?.id || null,
+        index: Math.max(0, Math.min(targetIndex, appState.documentModel.slides.length - 1)),
+        previewScrollState
+      };
+
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
       renderCurrentDocument();
       editorStatus.textContent = "Deleted slide";
-      setPreviewHint("The current slide was removed from the deck and will not be included in export.");
+      setPreviewHint("The editor stayed on the nearest remaining slide so your position in the deck is preserved.");
     }
 
     function createBlankPageSection(previewDocument) {
@@ -5564,6 +5628,14 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       };
     }
 
+    function createEmptyRemarkSlide() {
+      return createRemarkSlide({
+        directives: [createRemarkDirective("class", "middle, center")],
+        bodySource: "",
+        notesSource: ""
+      });
+    }
+
     function normalizeRemarkDirective(directive) {
       if (directive && directive.key) {
         return {
@@ -5673,7 +5745,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return null;
       }
 
-      const activeId = appState.selectedPage?.getAttribute("data-remark-slide-id");
+      const activeId = getActivePage(previewFrame.contentDocument)?.getAttribute("data-remark-slide-id");
       if (activeId) {
         return appState.documentModel.slides.find((slide) => slide.id === activeId) || null;
       }
