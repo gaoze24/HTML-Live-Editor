@@ -460,6 +460,8 @@
     }
 
     .preview-panel__body {
+      gap: 0;
+      padding-top: 0.58rem;
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 32%),
         rgba(15, 23, 42, 0.025);
@@ -892,10 +894,6 @@
         </div>
 
         <div class="preview-panel__body">
-          <div class="helper-row" id="previewHintRow" hidden>
-            <span class="status" id="previewHint"></span>
-          </div>
-
           <div class="preview-split" id="previewSplit">
             <div class="preview-stage">
               <iframe
@@ -1636,7 +1634,6 @@ Edit the slide source on the left, or add text and images directly in the previe
     const zoomSelect = document.getElementById("zoomSelect");
     const zoomInButton = document.getElementById("zoomInButton");
     const zoomResetButton = document.getElementById("zoomResetButton");
-    const previewHint = document.getElementById("previewHint");
     const sourceStats = document.getElementById("sourceStats");
     const pageSelect = document.getElementById("pageSelect");
     const pageSelectLabel = document.getElementById("pageSelectLabel");
@@ -1649,7 +1646,6 @@ Edit the slide source on the left, or add text and images directly in the previe
     const sourcePanelDescription = document.getElementById("sourcePanelDescription");
     const sourceContextHint = document.getElementById("sourceContextHint");
     const previewPanelDescription = document.getElementById("previewPanelDescription");
-    const previewHintRow = document.getElementById("previewHintRow");
     const previewSplit = document.getElementById("previewSplit");
     const notesResizeHandle = document.getElementById("notesResizeHandle");
     const presenterNotesPanel = document.getElementById("presenterNotesPanel");
@@ -2323,8 +2319,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     }
 
     function setPreviewHint(message) {
-      previewHint.textContent = message || "";
-      previewHintRow.hidden = !message;
+      void message;
     }
 
     function updateModeUi() {
