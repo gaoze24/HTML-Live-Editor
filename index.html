@@ -1210,10 +1210,87 @@ Edit the slide source on the left, or add text and images directly in the previe
       cool: "hue-rotate(12deg) saturate(1.08)"
     };
 
+    const CODE_LANGUAGE_ALIASES = Object.freeze({
+      bash: "bash",
+      css: "css",
+      cjs: "javascript",
+      htm: "markup",
+      html: "markup",
+      java: "java",
+      js: "javascript",
+      json: "json",
+      jsx: "javascript",
+      less: "css",
+      mjs: "javascript",
+      py: "python",
+      python: "python",
+      scss: "css",
+      shell: "bash",
+      sh: "bash",
+      svg: "markup",
+      ts: "typescript",
+      tsx: "typescript",
+      xml: "markup",
+      xhtml: "markup",
+      zsh: "bash"
+    });
+
+    const SUPPORTED_CODE_LANGUAGES = new Set([
+      "bash",
+      "css",
+      "java",
+      "javascript",
+      "json",
+      "markup",
+      "python",
+      "typescript"
+    ]);
+
     const EDITOR_STYLE = `
       <style id="editor-preview-style">
         html[data-editor-preview-root="true"] {
           min-height: 100%;
+          --editor-code-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(23, 37, 67, 0.98));
+          --editor-code-border: rgba(88, 166, 255, 0.18);
+          --editor-code-foreground: #e8eefc;
+          --editor-code-muted: #8da2c7;
+          --editor-code-comment: #7e92b7;
+          --editor-code-keyword: #ff8fb1;
+          --editor-code-string: #9ed46b;
+          --editor-code-number: #f5c26b;
+          --editor-code-function: #7fd6ff;
+          --editor-code-type: #9f95ff;
+          --editor-code-property: #8fc5ff;
+          --editor-code-tag: #ff9c7a;
+          --editor-code-attr-name: #8bd3ff;
+          --editor-code-attr-value: #c8ec8f;
+          --editor-code-operator: #89ddff;
+          --editor-code-variable: #ffd580;
+          --editor-code-punctuation: #b7c4de;
+          --editor-code-entity: #6ee7d8;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          html[data-editor-preview-root="true"] {
+            --editor-code-bg: linear-gradient(180deg, rgba(7, 14, 27, 0.98), rgba(13, 23, 41, 0.98));
+            --editor-code-border: rgba(126, 192, 255, 0.24);
+            --editor-code-foreground: #edf4ff;
+            --editor-code-muted: #9eb0cf;
+            --editor-code-comment: #88a0c6;
+            --editor-code-keyword: #ff9cbc;
+            --editor-code-string: #a7db77;
+            --editor-code-number: #ffd089;
+            --editor-code-function: #8ce1ff;
+            --editor-code-type: #b3a9ff;
+            --editor-code-property: #9cd1ff;
+            --editor-code-tag: #ffb08d;
+            --editor-code-attr-name: #9ae0ff;
+            --editor-code-attr-value: #d4f5a1;
+            --editor-code-operator: #97e5ff;
+            --editor-code-variable: #ffe09e;
+            --editor-code-punctuation: #c7d4eb;
+            --editor-code-entity: #8aefe4;
+          }
         }
 
         html[data-editor-preview-root="true"] body[data-editor-preview="true"] {
@@ -1573,6 +1650,93 @@ Edit the slide source on the left, or add text and images directly in the previe
         html[data-editor-preview-root="true"] body[data-editor-mode="remark-slideshow"] [data-remark-empty="true"] {
           color: rgba(19, 32, 58, 0.5);
           font-style: italic;
+        }
+
+        html[data-editor-preview-root="true"] :where(pre[data-editor-code-block="true"]) {
+          margin: 0;
+          padding: 1rem 1.1rem;
+          border-radius: 18px;
+          border: 1px solid var(--editor-code-border);
+          background: var(--editor-code-bg);
+          color: var(--editor-code-foreground);
+          overflow: auto;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 14px 30px rgba(15, 23, 42, 0.14);
+        }
+
+        html[data-editor-preview-root="true"] :where(pre[data-editor-code-block="true"] > code) {
+          display: block;
+          min-width: max-content;
+          font-family: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", "Fira Code", "Courier New", monospace;
+          font-size: 0.94rem;
+          line-height: 1.65;
+          white-space: pre;
+          tab-size: 2;
+          color: inherit;
+          background: transparent;
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token]) {
+          color: var(--editor-code-foreground);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="comment"]) {
+          color: var(--editor-code-comment);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="keyword"]) {
+          color: var(--editor-code-keyword);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="string"]) {
+          color: var(--editor-code-string);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="number"]) {
+          color: var(--editor-code-number);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="function"]) {
+          color: var(--editor-code-function);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="type"]),
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="decorator"]) {
+          color: var(--editor-code-type);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="property"]),
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="builtin"]) {
+          color: var(--editor-code-property);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="tag"]) {
+          color: var(--editor-code-tag);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="attr-name"]) {
+          color: var(--editor-code-attr-name);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="attr-value"]) {
+          color: var(--editor-code-attr-value);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="operator"]) {
+          color: var(--editor-code-operator);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="variable"]) {
+          color: var(--editor-code-variable);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="entity"]) {
+          color: var(--editor-code-entity);
+        }
+
+        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="punctuation"]) {
+          color: var(--editor-code-punctuation);
         }
       </style>
     `;
@@ -2601,6 +2765,394 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 </section>`;
     }
 
+    function applyCodeSyntaxHighlighting(previewDocument) {
+      if (!previewDocument) {
+        return;
+      }
+
+      previewDocument.querySelectorAll("pre code").forEach((codeElement) => {
+        highlightPreviewCodeBlock(codeElement);
+      });
+    }
+
+    function highlightPreviewCodeBlock(codeElement) {
+      if (!codeElement || codeElement.tagName !== "CODE") {
+        return;
+      }
+
+      const preElement = codeElement.parentElement;
+      if (!preElement || preElement.tagName !== "PRE") {
+        return;
+      }
+
+      if (hasForeignCodeMarkup(codeElement)) {
+        return;
+      }
+
+      const rawCode = codeElement.textContent || "";
+      const language = detectCodeLanguage(codeElement, preElement);
+      const highlightedHtml = renderHighlightedCode(rawCode, language);
+
+      preElement.setAttribute("data-editor-code-block", "true");
+      codeElement.setAttribute("data-editor-code-block", "true");
+      codeElement.setAttribute("data-editor-highlighted", "true");
+
+      if (language) {
+        preElement.setAttribute("data-editor-code-language", language);
+        codeElement.setAttribute("data-editor-code-language", language);
+      } else {
+        preElement.removeAttribute("data-editor-code-language");
+        codeElement.removeAttribute("data-editor-code-language");
+      }
+
+      codeElement.innerHTML = highlightedHtml;
+    }
+
+    function hasForeignCodeMarkup(codeElement) {
+      return Array.from(codeElement.children).some((child) => {
+        return !child.hasAttribute("data-editor-code-token");
+      });
+    }
+
+    function detectCodeLanguage(codeElement, preElement) {
+      const candidates = [
+        preElement?.getAttribute("data-remark-language"),
+        extractFenceLanguage(preElement?.getAttribute("data-remark-fence-info")),
+        codeElement?.getAttribute("data-language"),
+        preElement?.getAttribute("data-language"),
+        codeElement?.getAttribute("data-lang"),
+        preElement?.getAttribute("data-lang"),
+        codeElement?.getAttribute("lang"),
+        preElement?.getAttribute("lang"),
+        extractCodeLanguageFromType(codeElement?.getAttribute("type")),
+        extractCodeLanguageFromType(preElement?.getAttribute("type")),
+        extractCodeLanguageFromClassNames(codeElement?.className),
+        extractCodeLanguageFromClassNames(preElement?.className)
+      ];
+
+      return candidates.map(normalizeCodeLanguage).find(Boolean) || "";
+    }
+
+    function extractFenceLanguage(infoString) {
+      const parts = String(infoString || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) {
+        return "";
+      }
+
+      return parts.find((part) => !/[=:{\[]/.test(part)) || parts[0];
+    }
+
+    function extractCodeLanguageFromType(typeValue) {
+      const normalized = String(typeValue || "").trim().toLowerCase();
+      if (!normalized) {
+        return "";
+      }
+
+      const mimeMatch = normalized.match(/^(?:text|application)\/([a-z0-9.+-]+)$/);
+      if (mimeMatch) {
+        return mimeMatch[1].replace(/^x-/, "");
+      }
+
+      const genericMatch = normalized.match(/^[a-z0-9.+-]+\/x-([a-z0-9.+-]+)$/);
+      return genericMatch ? genericMatch[1] : "";
+    }
+
+    function extractCodeLanguageFromClassNames(className) {
+      const parts = String(className || "").split(/\s+/).map((part) => part.trim()).filter(Boolean);
+      for (const part of parts) {
+        const match = part.match(/^(?:language|lang)-([a-z0-9+#-]+)$/i);
+        if (match) {
+          return match[1];
+        }
+
+        if (CODE_LANGUAGE_ALIASES[part.toLowerCase()] || SUPPORTED_CODE_LANGUAGES.has(part.toLowerCase())) {
+          return part;
+        }
+      }
+
+      return "";
+    }
+
+    function normalizeCodeLanguage(value) {
+      let normalized = String(value || "").trim().toLowerCase();
+      if (!normalized) {
+        return "";
+      }
+
+      normalized = normalized
+        .replace(/^(?:language|lang)-/, "")
+        .replace(/^x-/, "")
+        .split(/[\s,{\[]/)[0]
+        .replace(/^[^a-z0-9+#-]+|[^a-z0-9+#-]+$/g, "");
+
+      return CODE_LANGUAGE_ALIASES[normalized] || normalized;
+    }
+
+    function renderHighlightedCode(source, language) {
+      const normalizedLanguage = normalizeCodeLanguage(language);
+      const safeSource = String(source || "");
+
+      try {
+        switch (normalizedLanguage) {
+          case "markup":
+            return highlightMarkupCode(safeSource);
+          case "css":
+            return highlightCssCode(safeSource);
+          case "json":
+            return highlightJsonCode(safeSource);
+          case "javascript":
+          case "typescript":
+          case "java":
+            return highlightClikeCode(safeSource, normalizedLanguage);
+          case "python":
+            return highlightPythonCode(safeSource);
+          case "bash":
+            return highlightBashCode(safeSource);
+          default:
+            return escapeHtml(safeSource);
+        }
+      } catch (error) {
+        return escapeHtml(safeSource);
+      }
+    }
+
+    function highlightClikeCode(source, language) {
+      const keywordsByLanguage = {
+        java: "abstract assert break case catch class const continue default do else enum extends final finally for if implements import instanceof interface native new package private protected public return static strictfp super switch synchronized this throw throws transient try volatile while boolean byte char double float int long short void var record sealed permits non-sealed",
+        javascript: "await break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new of return static super switch this throw try typeof var void while with yield async null true false",
+        typescript: "abstract as asserts await break case catch class const continue debugger declare default delete do else enum export extends finally for function if implements import in infer instanceof interface is keyof let namespace never new of override private protected public readonly return satisfies static super switch this throw try type typeof unique var void while with yield async null true false"
+      };
+
+      const builtinsByLanguage = {
+        java: "String System Integer Long Double Float Boolean Math List Map Set ArrayList HashMap Optional Objects Arrays Stream Runnable Exception RuntimeException",
+        javascript: "Array Boolean Date Error JSON Map Math Number Object Promise RegExp Set String console document window globalThis Intl URL fetch",
+        typescript: "Array Boolean Date Error JSON Map Math Number Object Promise RegExp Set String console document window globalThis Intl URL fetch Partial Pick Record Omit Readonly"
+      };
+
+      return tokenizeCode(source, [
+        createCodeRule(/\s+/y),
+        createCodeRule(/\/\*[\s\S]*?\*\//y, "comment"),
+        createCodeRule(/\/\/[^\n\r]*/y, "comment"),
+        createCodeRule(/@\w[\w.]*/y, "decorator"),
+        createCodeRule(/`(?:\\[\s\S]|[^\\`])*`/y, "string"),
+        createCodeRule(/'(?:\\.|[^'\\])*'/y, "string"),
+        createCodeRule(/"(?:\\.|[^"\\])*"/y, "string"),
+        createCodeRule(/\b(?:0x[\da-f]+|0b[01]+|0o[0-7]+|\d+(?:\.\d+)?(?:e[+-]?\d+)?)\b/iy, "number"),
+        createCodeRule(createKeywordRegex(keywordsByLanguage[language]), "keyword"),
+        createCodeRule(createKeywordRegex(builtinsByLanguage[language]), "builtin"),
+        createCodeRule(/\b[A-Za-z_$][\w$]*(?=\s*:)/y, "property"),
+        createCodeRule(/\b[A-Za-z_$][\w$]*(?=\s*\()/y, "function"),
+        createCodeRule(/(?:=>|===|!==|==|!=|<=|>=|\+\+|--|\*\*|&&|\|\||[-+*/%=&|^!<>?:~]+)/y, "operator"),
+        createCodeRule(/[()[\]{}.,;]/y, "punctuation")
+      ]);
+    }
+
+    function highlightPythonCode(source) {
+      return tokenizeCode(source, [
+        createCodeRule(/\s+/y),
+        createCodeRule(/#[^\n\r]*/y, "comment"),
+        createCodeRule(/(?:[rRuUbBfF]{0,2})"""[\s\S]*?"""/y, "string"),
+        createCodeRule(/(?:[rRuUbBfF]{0,2})'''[\s\S]*?'''/y, "string"),
+        createCodeRule(/(?:[rRuUbBfF]{0,2})"(?:\\.|[^"\\])*"/y, "string"),
+        createCodeRule(/(?:[rRuUbBfF]{0,2})'(?:\\.|[^'\\])*'/y, "string"),
+        createCodeRule(/@\w[\w.]*/y, "decorator"),
+        createCodeRule(/\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/iy, "number"),
+        createCodeRule(createKeywordRegex("and as assert async await break class continue def del elif else except False finally for from global if import in is lambda None nonlocal not or pass raise return True try while with yield match case"), "keyword"),
+        createCodeRule(createKeywordRegex("self cls print len range dict list tuple set str int float bool object Exception ValueError TypeError Path"), "builtin"),
+        createCodeRule(/\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()/y, "function"),
+        createCodeRule(/[-+*/%=&|^!<>:]+/y, "operator"),
+        createCodeRule(/[()[\]{}.,;]/y, "punctuation")
+      ]);
+    }
+
+    function highlightBashCode(source) {
+      return tokenizeCode(source, [
+        createCodeRule(/\s+/y),
+        createCodeRule(/#[^\n\r]*/y, "comment"),
+        createCodeRule(/"(?:\\.|[^"\\])*"/y, "string"),
+        createCodeRule(/'(?:\\.|[^'\\])*'/y, "string"),
+        createCodeRule(/\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^}]+\}|[#?*!@$0-9-])/y, "variable"),
+        createCodeRule(createKeywordRegex("if then elif else fi for while until do done in case esac function select time coproc return exit export local readonly declare"), "keyword"),
+        createCodeRule(/\b\d+\b/y, "number"),
+        createCodeRule(/(?:\|\||&&|<<-?|>>|[|&;<>()])/y, "operator"),
+        createCodeRule(/[()[\]{},;]/y, "punctuation")
+      ]);
+    }
+
+    function highlightJsonCode(source) {
+      return tokenizeCode(source, [
+        createCodeRule(/\s+/y),
+        createCodeRule(/"(?:\\.|[^"\\])*"(?=\s*:)/y, "property"),
+        createCodeRule(/"(?:\\.|[^"\\])*"/y, "string"),
+        createCodeRule(/\b-?\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/iy, "number"),
+        createCodeRule(createKeywordRegex("true false null"), "keyword"),
+        createCodeRule(/[{}\[\],:]/y, "punctuation")
+      ]);
+    }
+
+    function highlightCssCode(source) {
+      return tokenizeCode(source, [
+        createCodeRule(/\s+/y),
+        createCodeRule(/\/\*[\s\S]*?\*\//y, "comment"),
+        createCodeRule(/"(?:\\.|[^"\\])*"/y, "string"),
+        createCodeRule(/'(?:\\.|[^'\\])*'/y, "string"),
+        createCodeRule(/@[A-Za-z-]+/y, "keyword"),
+        createCodeRule(/#[0-9A-Fa-f]{3,8}\b/y, "number"),
+        createCodeRule(/(?:--[A-Za-z0-9_-]+|[A-Za-z-]+)(?=\s*:)/y, "property"),
+        createCodeRule(/\b[A-Za-z-]+(?=\()/y, "function"),
+        createCodeRule(/\b\d+(?:\.\d+)?(?:%|[a-z]+)?\b/iy, "number"),
+        createCodeRule(/[.#]?[A-Za-z_-][A-Za-z0-9_-]*/y, "tag"),
+        createCodeRule(/[-+*/%=&|^!<>~]+/y, "operator"),
+        createCodeRule(/[{}:;(),]/y, "punctuation")
+      ]);
+    }
+
+    function highlightMarkupCode(source) {
+      let output = "";
+      let index = 0;
+      const tagRegex = /<!DOCTYPE[\s\S]*?>|<!--[\s\S]*?-->|<\/?[A-Za-z][^<>]*?>/iy;
+      const entityRegex = /&(?:#\d+|#x[\da-f]+|[a-z][a-z0-9]+);/iy;
+
+      while (index < source.length) {
+        tagRegex.lastIndex = index;
+        const tagMatch = tagRegex.exec(source);
+        if (tagMatch && tagMatch.index === index) {
+          const token = tagMatch[0];
+          output += token.startsWith("<!--")
+            ? wrapHighlightedToken("comment", token)
+            : token.toUpperCase().startsWith("<!DOCTYPE")
+              ? wrapHighlightedToken("keyword", token)
+              : highlightMarkupTag(token);
+          index = tagRegex.lastIndex;
+          continue;
+        }
+
+        entityRegex.lastIndex = index;
+        const entityMatch = entityRegex.exec(source);
+        if (entityMatch && entityMatch.index === index) {
+          output += wrapHighlightedToken("entity", entityMatch[0]);
+          index = entityRegex.lastIndex;
+          continue;
+        }
+
+        output += escapeHtml(source[index]);
+        index += 1;
+      }
+
+      return output;
+    }
+
+    function highlightMarkupTag(tagSource) {
+      const match = tagSource.match(/^(<\/?)([^\s/>]+)([\s\S]*?)(\/?>)$/);
+      if (!match) {
+        return escapeHtml(tagSource);
+      }
+
+      const [, open, tagName, attributes, close] = match;
+      return (
+        wrapHighlightedToken("punctuation", open) +
+        wrapHighlightedToken("tag", tagName) +
+        highlightMarkupAttributes(attributes) +
+        wrapHighlightedToken("punctuation", close)
+      );
+    }
+
+    function highlightMarkupAttributes(source) {
+      let output = "";
+      let index = 0;
+
+      while (index < source.length) {
+        const whitespace = source.slice(index).match(/^\s+/);
+        if (whitespace) {
+          output += escapeHtml(whitespace[0]);
+          index += whitespace[0].length;
+          continue;
+        }
+
+        const attribute = source.slice(index).match(/^([^\s=/>]+)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/);
+        if (!attribute) {
+          output += escapeHtml(source[index]);
+          index += 1;
+          continue;
+        }
+
+        output += wrapHighlightedToken("attr-name", attribute[1]);
+
+        if (attribute[2]) {
+          const valueMatch = attribute[2].match(/^(\s*=\s*)([\s\S]+)$/);
+          output += escapeHtml(valueMatch[1]);
+          output += wrapHighlightedToken("attr-value", valueMatch[2]);
+        }
+
+        index += attribute[0].length;
+      }
+
+      return output;
+    }
+
+    function tokenizeCode(source, rules) {
+      let output = "";
+      let index = 0;
+
+      while (index < source.length) {
+        let matched = false;
+
+        for (const rule of rules) {
+          rule.regex.lastIndex = index;
+          const match = rule.regex.exec(source);
+          if (!match || match.index !== index) {
+            continue;
+          }
+
+          output += rule.tokenType ? wrapHighlightedToken(rule.tokenType, match[0]) : escapeHtml(match[0]);
+          index = rule.regex.lastIndex;
+          matched = true;
+          break;
+        }
+
+        if (!matched) {
+          output += escapeHtml(source[index]);
+          index += 1;
+        }
+      }
+
+      return output;
+    }
+
+    function createCodeRule(regex, tokenType = "") {
+      return { regex, tokenType };
+    }
+
+    function createKeywordRegex(words) {
+      const values = String(words || "").split(/\s+/).filter(Boolean).map(escapeRegex);
+      return new RegExp(`\\b(?:${values.join("|")})\\b`, "iy");
+    }
+
+    function wrapHighlightedToken(tokenType, value) {
+      return `<span data-editor-code-token="${escapeHtmlAttribute(tokenType)}">${escapeHtml(value)}</span>`;
+    }
+
+    function stripPreviewOnlyCodeDecorations(root) {
+      if (!root) {
+        return;
+      }
+
+      root.querySelectorAll("code[data-editor-highlighted='true']").forEach((codeElement) => {
+        codeElement.textContent = codeElement.textContent;
+        codeElement.removeAttribute("data-editor-highlighted");
+      });
+
+      root.querySelectorAll("[data-editor-code-block], [data-editor-code-language]").forEach((element) => {
+        element.removeAttribute("data-editor-code-block");
+        element.removeAttribute("data-editor-code-language");
+      });
+
+      root.querySelectorAll("[data-editor-code-token]").forEach((element) => {
+        const textNode = element.ownerDocument.createTextNode(element.textContent || "");
+        element.replaceWith(textNode);
+      });
+    }
+
     function decoratePreviewDocument() {
       const previewDocument = previewFrame.contentDocument;
 
@@ -2614,6 +3166,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       initializePageModel(previewDocument);
       syncDocumentPageDefaultsFromPreview(previewDocument);
       applyDocumentPageDefaults(previewDocument);
+      applyCodeSyntaxHighlighting(previewDocument);
       markInteractiveNodes(previewDocument);
       ensureEditorOverlay(previewDocument);
       bindPreviewEvents(previewDocument);
@@ -2821,6 +3374,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           return;
         }
 
+        if (isPreviewCodeTokenElement(element)) {
+          return;
+        }
+
         element.removeAttribute("data-editor-selectable");
         element.removeAttribute("data-editor-text-editable");
         element.removeAttribute("data-editor-image");
@@ -2852,6 +3409,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function isTextEditableElement(element) {
       if (!TEXT_EDITABLE_TAGS.has(element.tagName)) {
+        return false;
+      }
+
+      if (isCodeBlockElement(element)) {
         return false;
       }
 
@@ -2895,6 +3456,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return false;
       }
 
+      if (isPreviewCodeTokenElement(element) || (element.tagName === "CODE" && element.parentElement?.tagName === "PRE")) {
+        return false;
+      }
+
       if (element.matches("[data-editor-page='true']")) {
         return true;
       }
@@ -2914,6 +3479,22 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       });
 
       return Boolean(meaningfulText || hasRenderableChild);
+    }
+
+    function isCodeBlockElement(element) {
+      if (!element) {
+        return false;
+      }
+
+      if (element.tagName === "PRE") {
+        return element.firstElementChild?.tagName === "CODE";
+      }
+
+      return element.tagName === "CODE" && element.parentElement?.tagName === "PRE";
+    }
+
+    function isPreviewCodeTokenElement(element) {
+      return Boolean(element?.hasAttribute("data-editor-code-token")) || Boolean(element?.closest?.("[data-editor-code-token]"));
     }
 
     function ensureEditorOverlay(previewDocument) {
@@ -4370,6 +4951,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       clone.querySelector("#editor-preview-style")?.remove();
       clone.querySelector(`#${PREVIEW_ZOOM_STYLE_ID}`)?.remove();
       clone.querySelectorAll("[data-editor-overlay-root]").forEach((overlay) => overlay.remove());
+      stripPreviewOnlyCodeDecorations(clone);
 
       clone.querySelectorAll("*").forEach((element) => {
         finalizeClonedTransform(element);
@@ -4980,7 +5562,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         }
 
         if (/^```/.test(line.trim())) {
-          const language = line.trim().slice(3).trim();
+          const fenceInfo = line.trim().slice(3).trim();
+          const language = normalizeCodeLanguage(extractFenceLanguage(fenceInfo));
           const codeLines = [];
           index += 1;
 
@@ -4993,7 +5576,9 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
             index += 1;
           }
 
-          blocks.push(`<pre data-remark-block="code" data-remark-language="${escapeHtmlAttribute(language)}"><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+          const fenceInfoAttribute = fenceInfo ? ` data-remark-fence-info="${escapeHtmlAttribute(fenceInfo)}"` : "";
+          const languageAttribute = language ? ` data-remark-language="${escapeHtmlAttribute(language)}"` : "";
+          blocks.push(`<pre data-remark-block="code"${languageAttribute}${fenceInfoAttribute}><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
           continue;
         }
 
@@ -5220,9 +5805,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         }).join("\n");
       }
 
-      if (tagName === "PRE" && canSerializeSimpleCodeBlock(cleaned)) {
-        const code = cleaned.querySelector("code");
-        return `\`\`\`\n${code.textContent.replace(/\n+$/, "")}\n\`\`\``;
+      if (tagName === "PRE") {
+        const serializedCodeBlock = serializeRemarkCodeBlock(cleaned);
+        if (serializedCodeBlock) {
+          return serializedCodeBlock;
+        }
       }
 
       if (tagName === "IMG" && canSerializeSimpleStandaloneImage(cleaned)) {
@@ -5253,6 +5840,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function cloneForRemarkSource(element) {
       const clone = element.cloneNode(true);
+      stripPreviewOnlyCodeDecorations(clone);
       clone.querySelectorAll("*").forEach((node) => {
         finalizeClonedTransform(node);
       });
@@ -5351,12 +5939,27 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function canSerializeSimpleCodeBlock(element) {
-      if (hasNonTrivialAttributes(element)) {
+      if (hasNonTrivialAttributes(element, ["data-remark-block", "data-remark-language", "data-remark-fence-info"])) {
         return false;
       }
 
       const code = element.querySelector("code");
       return Boolean(code && element.children.length === 1 && !hasNonTrivialAttributes(code));
+    }
+
+    function serializeRemarkCodeBlock(element) {
+      if (!canSerializeSimpleCodeBlock(element)) {
+        return "";
+      }
+
+      const code = element.querySelector("code");
+      if (!code) {
+        return "";
+      }
+
+      const fenceInfo = (element.getAttribute("data-remark-fence-info") || element.getAttribute("data-remark-language") || "").trim();
+      const fenceSuffix = fenceInfo ? fenceInfo : "";
+      return `\`\`\`${fenceSuffix}\n${code.textContent.replace(/\n+$/, "")}\n\`\`\``;
     }
 
     function canSerializeSimpleStandaloneImage(element) {
@@ -5486,6 +6089,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function escapeHtmlAttribute(value) {
       return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+
+    function escapeRegex(value) {
+      return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
 
     initialize();
