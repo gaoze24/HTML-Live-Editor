@@ -572,10 +572,7 @@
     }
 
     .app.is-preview-maximized .preview-panel__body {
-      padding:
-        max(4.4rem, calc(env(safe-area-inset-top, 0px) + 3.5rem))
-        clamp(0.8rem, 2vw, 1.5rem)
-        clamp(0.8rem, 1.8vh, 1.25rem);
+      padding: clamp(0.45rem, 1vw, 0.8rem);
       border-radius: 0;
       height: 100%;
     }
@@ -605,27 +602,31 @@
     /* Floating toolbar for maximized mode */
     .max-view-toolbar {
       display: none;
-      position: fixed;
-      top: max(0.8rem, calc(env(safe-area-inset-top, 0px) + 0.45rem));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 140;
+      position: absolute;
+      top: clamp(0.72rem, 1.5vw, 1rem);
+      right: clamp(0.72rem, 1.5vw, 1rem);
+      z-index: 5;
       align-items: center;
       justify-content: center;
       gap: 0.38rem;
-      max-width: calc(100vw - 1.2rem);
-      padding: 0.36rem 0.42rem;
+      max-width: min(calc(100% - 1.2rem), 30rem);
+      padding: 0.34rem 0.38rem;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.62);
-      background: rgba(255, 248, 240, 0.9);
+      background: rgba(255, 248, 240, 0.86);
       backdrop-filter: blur(18px);
       box-shadow:
-        0 18px 32px rgba(41, 32, 23, 0.18),
+        0 14px 28px rgba(41, 32, 23, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      pointer-events: none;
     }
 
     .app.is-preview-maximized .max-view-toolbar {
       display: inline-flex;
+    }
+
+    .max-view-toolbar > * {
+      pointer-events: auto;
     }
 
     .max-view-toolbar .preview-zoom-controls {
@@ -652,8 +653,10 @@
       font-size: 0.78rem;
     }
 
-    .max-view-toolbar .preview-zoom-reset {
-      display: none;
+    .max-view-toolbar__actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
     }
 
     .max-view-toolbar-divider {
@@ -988,15 +991,15 @@
       }
 
       .app.is-preview-maximized .preview-panel__body {
-        padding:
-          max(4rem, calc(env(safe-area-inset-top, 0px) + 3.1rem))
-          0.6rem
-          0.6rem;
+        padding: 0.35rem;
       }
 
       .max-view-toolbar {
         gap: 0.3rem;
         padding: 0.28rem 0.32rem;
+        top: 0.5rem;
+        right: 0.5rem;
+        max-width: calc(100% - 0.9rem);
       }
 
       .max-view-toolbar .ghost-button {
@@ -1006,6 +1009,10 @@
       .max-view-toolbar .preview-zoom-select {
         min-width: 5.7rem;
         padding-inline: 0.55rem;
+      }
+
+      .max-view-toolbar-divider {
+        margin-inline: 0.1rem;
       }
     }
 
@@ -1224,31 +1231,35 @@
               <button class="ghost-button preview-zoom-reset" id="zoomResetButton" type="button" title="Reset zoom to 100%">100%</button>
             </div>
             <button class="ghost-button" id="maximizePreviewButton" type="button" aria-pressed="false">Maximize</button>
+            <button class="ghost-button" id="fullscreenButton" type="button" aria-pressed="false">Fullscreen</button>
             <span class="helper-pill" id="editorStatus">Ready</span>
           </div>
         </div>
 
         <div class="preview-panel__body">
-          <div class="max-view-toolbar" id="maxViewToolbar" role="toolbar" aria-label="Preview controls" hidden aria-hidden="true">
-            <div class="preview-zoom-controls" aria-label="Zoom controls">
-              <button class="ghost-button preview-zoom-button" id="maxZoomOutButton" type="button" title="Zoom out">−</button>
-              <select class="preview-zoom-select" id="maxZoomSelect" aria-label="Preview zoom">
-                <option value="50">50%</option>
-                <option value="75">75%</option>
-                <option value="100" selected>100%</option>
-                <option value="125">125%</option>
-                <option value="150">150%</option>
-                <option value="200">200%</option>
-                <option value="fit-width">Fit Width</option>
-                <option value="fit-page">Fit Page</option>
-              </select>
-              <button class="ghost-button preview-zoom-button" id="maxZoomInButton" type="button" title="Zoom in">+</button>
-            </div>
-            <span class="max-view-toolbar-divider"></span>
-            <button class="ghost-button" id="exitMaxViewButton" type="button">Exit Max View</button>
-          </div>
           <div class="preview-split" id="previewSplit">
             <div class="preview-stage">
+              <div class="max-view-toolbar" id="maxViewToolbar" role="toolbar" aria-label="Preview controls" hidden aria-hidden="true">
+                <div class="preview-zoom-controls" aria-label="Zoom controls">
+                  <button class="ghost-button preview-zoom-button" id="maxZoomOutButton" type="button" title="Zoom out">−</button>
+                  <select class="preview-zoom-select" id="maxZoomSelect" aria-label="Preview zoom">
+                    <option value="50">50%</option>
+                    <option value="75">75%</option>
+                    <option value="100" selected>100%</option>
+                    <option value="125">125%</option>
+                    <option value="150">150%</option>
+                    <option value="200">200%</option>
+                    <option value="fit-width">Fit Width</option>
+                    <option value="fit-page">Fit Page</option>
+                  </select>
+                  <button class="ghost-button preview-zoom-button" id="maxZoomInButton" type="button" title="Zoom in">+</button>
+                </div>
+                <span class="max-view-toolbar-divider"></span>
+                <div class="max-view-toolbar__actions">
+                  <button class="ghost-button" id="maxFullscreenButton" type="button" aria-pressed="false">Fullscreen</button>
+                  <button class="ghost-button" id="exitMaxViewButton" type="button">Exit Max View</button>
+                </div>
+              </div>
               <iframe
                 class="preview-frame"
                 id="previewFrame"
@@ -2118,7 +2129,9 @@ Edit the slide source on the left, or add text and images directly in the previe
       sourcePaneSize: 480,
       notesPaneSize: 224,
       previewMaximized: false,
-      lastFocusedBeforeMaxView: null
+      fullscreenActive: false,
+      lastFocusedBeforeMaxView: null,
+      lastFocusedBeforeFullscreen: null
     };
 
     const ALIGNMENT_SNAP_THRESHOLD = 6;
@@ -2158,10 +2171,12 @@ Edit the slide source on the left, or add text and images directly in the previe
     const zoomInButton = document.getElementById("zoomInButton");
     const zoomResetButton = document.getElementById("zoomResetButton");
     const maximizePreviewButton = document.getElementById("maximizePreviewButton");
+    const fullscreenButton = document.getElementById("fullscreenButton");
     const maxViewToolbar = document.getElementById("maxViewToolbar");
     const maxZoomOutButton = document.getElementById("maxZoomOutButton");
     const maxZoomSelect = document.getElementById("maxZoomSelect");
     const maxZoomInButton = document.getElementById("maxZoomInButton");
+    const maxFullscreenButton = document.getElementById("maxFullscreenButton");
     const exitMaxViewButton = document.getElementById("exitMaxViewButton");
     const sourceStats = document.getElementById("sourceStats");
     const pageSelect = document.getElementById("pageSelect");
@@ -2229,12 +2244,14 @@ Edit the slide source on the left, or add text and images directly in the previe
       bindResizeHandles();
       updatePreviewZoomUi();
       syncPreviewMaximizedUi(false);
+      syncFullscreenUi(false);
       applyWorkspacePreferences();
       loadNormalDocument(STARTER_HTML, { fileName: "edited_presentation.html" });
     }
 
     function bindAppEvents() {
       window.addEventListener("resize", handleWindowResize);
+      document.addEventListener("fullscreenchange", handleFullscreenChange);
 
       sourceInput.addEventListener("input", () => {
         updateSourceStats();
@@ -2251,6 +2268,7 @@ Edit the slide source on the left, or add text and images directly in the previe
       });
 
       maximizePreviewButton.addEventListener("click", togglePreviewMaximized);
+      fullscreenButton.addEventListener("click", toggleBrowserFullscreen);
 
       importHtmlButton.addEventListener("click", () => {
         htmlImportPicker.value = "";
@@ -2309,6 +2327,7 @@ Edit the slide source on the left, or add text and images directly in the previe
         zoomSelect.value = event.target.value;
         handlePreviewZoomSelect();
       });
+      maxFullscreenButton.addEventListener("click", toggleBrowserFullscreen);
       exitMaxViewButton.addEventListener("click", () => setPreviewMaximized(false));
 
       pageSelect.addEventListener("change", () => {
@@ -2510,6 +2529,36 @@ Edit the slide source on the left, or add text and images directly in the previe
 
       workspace.style.setProperty("--source-pane-size", `${Math.round(sourcePaneSize)}px`);
       previewSplit.style.setProperty("--presenter-notes-size", `${Math.round(notesPaneSize)}px`);
+    }
+
+    function supportsBrowserFullscreen() {
+      return document.fullscreenEnabled !== false
+        && typeof appElement.requestFullscreen === "function"
+        && typeof document.exitFullscreen === "function";
+    }
+
+    function isAppInFullscreen() {
+      return document.fullscreenElement === appElement;
+    }
+
+    function syncFullscreenUi(isFullscreen = isAppInFullscreen()) {
+      const isSupported = supportsBrowserFullscreen();
+      const label = isFullscreen ? "Exit Fullscreen" : "Fullscreen";
+
+      appState.fullscreenActive = isFullscreen;
+      appElement.classList.toggle("is-browser-fullscreen", isFullscreen);
+
+      fullscreenButton.hidden = !isSupported;
+      maxFullscreenButton.hidden = !isSupported;
+      fullscreenButton.disabled = !isSupported;
+      maxFullscreenButton.disabled = !isSupported;
+
+      fullscreenButton.setAttribute("aria-pressed", String(isFullscreen));
+      maxFullscreenButton.setAttribute("aria-pressed", String(isFullscreen));
+      fullscreenButton.textContent = label;
+      maxFullscreenButton.textContent = label;
+      fullscreenButton.title = label;
+      maxFullscreenButton.title = label;
     }
 
     function syncPreviewZoomOptionLabels(sourceSelect, targetSelect) {
@@ -2792,6 +2841,66 @@ Edit the slide source on the left, or add text and images directly in the previe
       setPreviewMaximized(!appState.previewMaximized);
     }
 
+    function handleFullscreenChange() {
+      const isFullscreen = isAppInFullscreen();
+      syncFullscreenUi(isFullscreen);
+      applyWorkspacePreferences();
+
+      if (appState.previewZoomMode !== "manual") {
+        applyPreviewZoom();
+      } else {
+        scheduleOverlayRefresh();
+      }
+
+      const focusFallback = appState.previewMaximized ? maxFullscreenButton : fullscreenButton;
+      const focusTarget = isFullscreen
+        ? focusFallback
+        : (canRestoreFocus(appState.lastFocusedBeforeFullscreen) ? appState.lastFocusedBeforeFullscreen : focusFallback);
+
+      window.requestAnimationFrame(() => {
+        focusTarget?.focus?.({ preventScroll: true });
+        if (!isFullscreen) {
+          appState.lastFocusedBeforeFullscreen = null;
+        }
+      });
+    }
+
+    async function setBrowserFullscreen(shouldEnter) {
+      if (!supportsBrowserFullscreen() || appState.fullscreenActive === shouldEnter) {
+        return;
+      }
+
+      if (shouldEnter) {
+        appState.lastFocusedBeforeFullscreen = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+
+        try {
+          await appElement.requestFullscreen();
+        } catch (error) {
+          syncFullscreenUi(false);
+          editorStatus.textContent = "Fullscreen was blocked by the browser.";
+        }
+        return;
+      }
+
+      if (!document.fullscreenElement) {
+        syncFullscreenUi(false);
+        return;
+      }
+
+      try {
+        await document.exitFullscreen();
+      } catch (error) {
+        syncFullscreenUi(isAppInFullscreen());
+        editorStatus.textContent = "Could not exit fullscreen.";
+      }
+    }
+
+    function toggleBrowserFullscreen() {
+      setBrowserFullscreen(!appState.fullscreenActive);
+    }
+
     function syncPreviewMaximizedUi(shouldMaximize) {
       appElement.classList.toggle("is-preview-maximized", shouldMaximize);
       topbar.hidden = shouldMaximize;
@@ -2841,7 +2950,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
         const focusTarget = canRestoreFocus(appState.lastFocusedBeforeMaxView)
           ? appState.lastFocusedBeforeMaxView
-          : maximizePreviewButton;
+          : (appState.fullscreenActive ? fullscreenButton : maximizePreviewButton);
         focusTarget.focus({ preventScroll: true });
         appState.lastFocusedBeforeMaxView = null;
       });
@@ -4122,6 +4231,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function handleAppKeydown(event) {
+      if (event.key === "Escape" && appState.fullscreenActive) {
+        return;
+      }
+
       if (event.key === "Escape" && appState.previewMaximized) {
         event.preventDefault();
         setPreviewMaximized(false);
