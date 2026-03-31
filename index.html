@@ -335,6 +335,29 @@
       transform: translateY(-0.5px);
     }
 
+    .toolbar-icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--control-height);
+      padding: 0.38rem;
+      text-decoration: none;
+      color: var(--muted-strong);
+      flex-shrink: 0;
+    }
+
+    .toolbar-icon-button:hover,
+    .toolbar-icon-button:focus-visible {
+      color: var(--text);
+    }
+
+    .toolbar-icon-button svg {
+      width: 1rem;
+      height: 1rem;
+      fill: currentColor;
+      display: block;
+    }
+
     .primary-button {
       color: var(--accent-foreground);
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
@@ -1108,6 +1131,18 @@
 
           <div class="toolbar__group toolbar__group--status">
             <span class="helper-pill" id="modeBadge">Mode: Normal HTML</span>
+            <a
+              class="ghost-button toolbar-icon-button"
+              href="https://github.com/gaoze24/HTML-Live-Editor"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View project on GitHub"
+              title="View on GitHub"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 1.5A10.5 10.5 0 0 0 8.68 22c.53.1.72-.23.72-.52v-1.82c-2.95.64-3.57-1.25-3.57-1.25-.48-1.22-1.18-1.54-1.18-1.54-.97-.66.07-.65.07-.65 1.07.08 1.64 1.1 1.64 1.1.96 1.64 2.51 1.17 3.12.89.1-.69.37-1.17.67-1.44-2.35-.27-4.82-1.17-4.82-5.23 0-1.16.41-2.11 1.1-2.85-.11-.27-.48-1.38.1-2.88 0 0 .9-.29 2.95 1.09a10.3 10.3 0 0 1 5.37 0c2.05-1.38 2.94-1.09 2.94-1.09.59 1.5.22 2.61.11 2.88.68.74 1.09 1.69 1.09 2.85 0 4.07-2.47 4.95-4.83 5.21.38.33.72.98.72 1.98v2.93c0 .29.19.63.73.52A10.5 10.5 0 0 0 12 1.5Z" />
+              </svg>
+            </a>
           </div>
         </div>
 
@@ -1290,8 +1325,8 @@
               <button class="ghost-button preview-zoom-button" id="zoomInButton" type="button" title="Zoom in">+</button>
               <button class="ghost-button preview-zoom-reset" id="zoomResetButton" type="button" title="Reset zoom to 100%">100%</button>
             </div>
-            <button class="ghost-button" id="maximizePreviewButton" type="button" aria-pressed="false">Maximize</button>
             <button class="ghost-button" id="fullscreenButton" type="button" aria-pressed="false">Fullscreen</button>
+            <button class="ghost-button" id="maximizePreviewButton" type="button" aria-pressed="false">Maximize</button>
             <span class="helper-pill" id="editorStatus">Ready</span>
           </div>
         </div>
