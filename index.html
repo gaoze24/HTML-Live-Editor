@@ -796,6 +796,13 @@
       box-shadow: 0 0 0 4px rgba(201, 109, 66, 0.12);
     }
 
+    .source-input.is-preview-synced {
+      border-color: rgba(15, 123, 255, 0.42);
+      box-shadow:
+        0 0 0 4px rgba(15, 123, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
     .preview-stage {
       flex: 1 1 auto;
       min-height: 0;
@@ -1776,6 +1783,42 @@ Edit the slide source on the left, or add text and images directly in the previe
           pointer-events: none;
         }
 
+        :where([data-editor-code-editor-layer="true"]) {
+          all: initial;
+          display: block;
+          box-sizing: border-box;
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        :where(textarea[data-editor-code-editor="true"]) {
+          all: initial;
+          box-sizing: border-box;
+          position: fixed;
+          margin: 0;
+          padding: 1rem 1.1rem;
+          border: 1px solid var(--editor-code-border);
+          border-radius: 18px;
+          background: var(--editor-code-bg);
+          color: var(--editor-code-foreground);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 16px 34px rgba(15, 23, 42, 0.2);
+          caret-color: #f7fbff;
+          resize: none;
+          overflow: auto;
+          white-space: pre;
+          word-break: normal;
+          overflow-wrap: normal;
+          pointer-events: auto;
+        }
+
+        :where(textarea[data-editor-code-editor="true"]:focus) {
+          outline: 2px solid rgba(15, 123, 255, 0.45);
+          outline-offset: 1px;
+        }
+
         :where([data-editor-guide-line="true"]) {
           all: initial;
           display: block;
@@ -2111,11 +2154,14 @@ Edit the slide source on the left, or add text and images directly in the previe
       renderTimer: null,
       previewSyncTimer: null,
       overlaySyncFrame: null,
+      sourceSyncFlashTimer: null,
       activeAlignmentGuides: null,
       previewZoomMode: "manual",
       previewZoomScale: 1,
       selectedElement: null,
       selectedPage: null,
+      activeCodeEditor: null,
+      sourceLookupCache: null,
       pendingImageTarget: null,
       imagePickerMode: null,
       pageCounter: 0,
@@ -2140,6 +2186,9 @@ Edit the slide source on the left, or add text and images directly in the previe
     const PREVIEW_ZOOM_MIN = 0.25;
     const PREVIEW_ZOOM_MAX = 3;
     const PREVIEW_ZOOM_STYLE_ID = "editor-preview-zoom-style";
+    const SOURCE_LOOKUP_DATA_URL_THRESHOLD = 512;
+    const SOURCE_LOOKUP_DATA_URL_PATTERN = /data:[^"'`\s>]+;base64,[A-Za-z0-9+/=\r\n]+/gi;
+    const SOURCE_LOOKUP_MEASURE_SAMPLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     const STORAGE_KEYS = {
       sourcePaneSize: "html-live-editor:source-pane-size",
@@ -2152,6 +2201,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     const previewPanelHeader = document.querySelector(".preview-panel > .panel__header");
     const workspace = document.getElementById("workspace");
     const workspaceResizeHandle = document.getElementById("workspaceResizeHandle");
+    const sourcePanel = document.getElementById("sourcePanel");
     const sourceInput = document.getElementById("sourceInput");
     const previewFrame = document.getElementById("previewFrame");
     const toggleSourceButton = document.getElementById("toggleSourceButton");
@@ -2259,6 +2309,7 @@ Edit the slide source on the left, or add text and images directly in the previe
           return;
         }
 
+        appState.sourceLookupCache = null;
         window.clearTimeout(appState.renderTimer);
         appState.renderTimer = window.setTimeout(commitSourceInputToModel, 140);
       });
@@ -3027,6 +3078,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
     function setSourceValue(value) {
       appState.isUpdatingSourceInternally = true;
+      appState.sourceLookupCache = null;
       sourceInput.value = value;
       updateSourceStats();
       appState.isUpdatingSourceInternally = false;
@@ -3143,6 +3195,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     }
 
     function renderCurrentDocument() {
+      commitActiveCodeEditor();
       clearSelection(false);
       appState.selectedPage = null;
       updateModeUi();
@@ -3954,10 +4007,17 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         element.removeAttribute("data-editor-selectable");
         element.removeAttribute("data-editor-text-editable");
         element.removeAttribute("data-editor-image");
+        element.removeAttribute("data-editor-code-editable");
 
         if (element !== previewDocument.body) {
           element.removeAttribute("contenteditable");
           element.removeAttribute("spellcheck");
+        }
+
+        if (element.tagName === "PRE" && isCodeBlockElement(element)) {
+          element.setAttribute("data-editor-selectable", "true");
+          element.setAttribute("data-editor-code-editable", "true");
+          return;
         }
 
         if (element.tagName === "IMG") {
@@ -4130,6 +4190,175 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       previewDocument?.querySelector("[data-editor-guide-layer='true']")?.replaceChildren();
     }
 
+    function getEditableCodeBlock(target) {
+      const preElement = target?.closest?.("pre");
+      if (!preElement || !isCodeBlockElement(preElement)) {
+        return null;
+      }
+
+      return preElement;
+    }
+
+    function ensureCodeEditorLayer(previewDocument) {
+      const overlayRoot = previewDocument?.querySelector("[data-editor-overlay-root='true']");
+      if (!overlayRoot) {
+        return null;
+      }
+
+      let layer = overlayRoot.querySelector("[data-editor-code-editor-layer='true']");
+      if (layer) {
+        return layer;
+      }
+
+      layer = previewDocument.createElement("div");
+      layer.setAttribute("data-editor-code-editor-layer", "true");
+      overlayRoot.appendChild(layer);
+      return layer;
+    }
+
+    function syncActiveCodeEditorValue() {
+      const session = appState.activeCodeEditor;
+      if (!session?.codeElement || !session.textarea) {
+        return;
+      }
+
+      session.codeElement.textContent = session.textarea.value.replace(/\r\n?/g, "\n");
+    }
+
+    function syncActiveCodeEditorOverlay() {
+      const session = appState.activeCodeEditor;
+      if (!session?.preElement || !session?.textarea || !session?.codeElement) {
+        return;
+      }
+
+      const previewDocument = previewFrame.contentDocument;
+      const previewWindow = previewFrame.contentWindow;
+      if (!previewDocument || !previewWindow || !previewDocument.contains(session.preElement)) {
+        commitActiveCodeEditor({ rehighlight: false });
+        return;
+      }
+
+      const rect = session.preElement.getBoundingClientRect();
+      const preStyle = previewWindow.getComputedStyle(session.preElement);
+      const codeStyle = previewWindow.getComputedStyle(session.codeElement);
+      const textarea = session.textarea;
+
+      textarea.style.left = `${Math.round(rect.left)}px`;
+      textarea.style.top = `${Math.round(rect.top)}px`;
+      textarea.style.width = `${Math.max(40, Math.round(rect.width))}px`;
+      textarea.style.height = `${Math.max(40, Math.round(rect.height))}px`;
+      textarea.style.paddingTop = preStyle.paddingTop;
+      textarea.style.paddingRight = preStyle.paddingRight;
+      textarea.style.paddingBottom = preStyle.paddingBottom;
+      textarea.style.paddingLeft = preStyle.paddingLeft;
+      textarea.style.border = preStyle.border;
+      textarea.style.borderRadius = preStyle.borderRadius;
+      textarea.style.background = preStyle.background;
+      textarea.style.color = codeStyle.color;
+      textarea.style.fontFamily = codeStyle.fontFamily;
+      textarea.style.fontSize = codeStyle.fontSize;
+      textarea.style.fontWeight = codeStyle.fontWeight;
+      textarea.style.lineHeight = codeStyle.lineHeight;
+      textarea.style.letterSpacing = codeStyle.letterSpacing;
+      textarea.style.tabSize = codeStyle.tabSize;
+      textarea.style.boxShadow = preStyle.boxShadow;
+    }
+
+    function commitActiveCodeEditor(options = {}) {
+      const session = appState.activeCodeEditor;
+      if (!session) {
+        return;
+      }
+
+      syncActiveCodeEditorValue();
+      session.codeElement.style.visibility = "";
+      session.preElement.removeAttribute("data-editor-code-editing");
+      session.textarea.remove();
+      appState.activeCodeEditor = null;
+
+      if (options.rehighlight !== false) {
+        highlightPreviewCodeBlock(session.codeElement);
+      }
+
+      scheduleOverlayRefresh();
+    }
+
+    function handleCodeEditorInput() {
+      syncActiveCodeEditorValue();
+      handlePreviewMutation();
+    }
+
+    function handleCodeEditorKeydown(event) {
+      if (!event.target.matches("[data-editor-code-editor='true']")) {
+        return;
+      }
+
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const textarea = event.target;
+        const selectionStart = textarea.selectionStart;
+        const selectionEnd = textarea.selectionEnd;
+        const nextValue = `${textarea.value.slice(0, selectionStart)}\t${textarea.value.slice(selectionEnd)}`;
+        textarea.value = nextValue;
+        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1);
+        handleCodeEditorInput();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.target.blur();
+      }
+    }
+
+    function startCodeEditor(preElement) {
+      if (!preElement || !preElement.isConnected) {
+        return;
+      }
+
+      if (appState.activeCodeEditor?.preElement === preElement) {
+        appState.activeCodeEditor.textarea.focus({ preventScroll: true });
+        return;
+      }
+
+      commitActiveCodeEditor();
+
+      const previewDocument = previewFrame.contentDocument;
+      const codeElement = preElement.querySelector("code");
+      const layer = ensureCodeEditorLayer(previewDocument);
+      if (!codeElement || !layer) {
+        return;
+      }
+
+      codeElement.textContent = codeElement.textContent;
+      codeElement.removeAttribute("data-editor-highlighted");
+      preElement.setAttribute("data-editor-code-editing", "true");
+      codeElement.style.visibility = "hidden";
+
+      const textarea = previewDocument.createElement("textarea");
+      textarea.setAttribute("data-editor-code-editor", "true");
+      textarea.setAttribute("spellcheck", "false");
+      textarea.setAttribute("wrap", "off");
+      textarea.value = codeElement.textContent || "";
+      textarea.addEventListener("input", handleCodeEditorInput);
+      textarea.addEventListener("keydown", handleCodeEditorKeydown);
+      textarea.addEventListener("blur", () => {
+        window.requestAnimationFrame(() => {
+          if (appState.activeCodeEditor?.textarea === textarea && previewDocument.activeElement !== textarea) {
+            commitActiveCodeEditor();
+            syncSourceFromPreview();
+          }
+        });
+      });
+
+      layer.replaceChildren(textarea);
+      appState.activeCodeEditor = { preElement, codeElement, textarea };
+      syncActiveCodeEditorOverlay();
+      textarea.focus({ preventScroll: true });
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      scheduleOverlayRefresh();
+    }
+
     function bindPreviewEvents(previewDocument) {
       previewDocument.addEventListener("click", handlePreviewClick);
       previewDocument.addEventListener("dblclick", handlePreviewDoubleClick);
@@ -4145,8 +4374,20 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function handlePreviewClick(event) {
       const target = getEventTargetElement(event);
       const previewDocument = previewFrame.contentDocument;
+      const codeEditorTarget = target?.closest?.("[data-editor-code-editor='true']");
 
       if (!target || !previewDocument) {
+        return;
+      }
+
+      if (codeEditorTarget && appState.activeCodeEditor?.preElement) {
+        const activeCodeBlock = appState.activeCodeEditor.preElement;
+        const page = getElementPage(activeCodeBlock);
+        if (page) {
+          setCurrentPage(page, { scroll: false });
+        }
+        selectElement(activeCodeBlock);
+        syncSourceEditorToPreviewTarget(activeCodeBlock);
         return;
       }
 
@@ -4164,6 +4405,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         event.preventDefault();
       }
 
+      const clickedCodeBlock = getEditableCodeBlock(target);
+      if (appState.activeCodeEditor && clickedCodeBlock !== appState.activeCodeEditor.preElement) {
+        commitActiveCodeEditor();
+      }
+
       const selectable = target.closest("[data-editor-selectable='true']");
       const page = getElementPage(target);
 
@@ -4173,6 +4419,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       if (selectable) {
         selectElement(selectable);
+        syncSourceEditorToPreviewTarget(selectable);
+        if (selectable.matches("[data-editor-code-editable='true']") || clickedCodeBlock === selectable) {
+          startCodeEditor(selectable);
+        }
         return;
       }
 
@@ -4180,6 +4430,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       if (page) {
         setCurrentPage(page, { scroll: false });
+        syncSourceEditorToPreviewTarget(page);
       }
 
       updateToolbarState();
@@ -4215,10 +4466,19 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return;
       }
 
+      if (appState.activeCodeEditor?.preElement === appState.selectedElement) {
+        commitActiveCodeEditor();
+      }
+
       startElementDrag(appState.selectedElement, event);
     }
 
     function handlePreviewKeydown(event) {
+      if (event.target?.matches?.("[data-editor-code-editor='true']")) {
+        handleDeleteShortcut(event);
+        return;
+      }
+
       if (event.key === "Tab") {
         const target = event.target;
         if (target && target.nodeType === 1 && target.matches("[data-editor-text-editable='true']")) {
@@ -4530,6 +4790,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       selectionBox.style.width = `${Math.round(rect.width + padding * 2)}px`;
       selectionBox.style.height = `${Math.round(rect.height + padding * 2)}px`;
       moveHandle.hidden = !canDragElement(appState.selectedElement);
+      syncActiveCodeEditorOverlay();
     }
 
     function canDragElement(element) {
@@ -5706,6 +5967,463 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function updateSourceStats() {
       sourceStats.textContent = `${sourceInput.value.length.toLocaleString()} characters`;
+    }
+
+    function isSourcePanelVisible() {
+      return !workspace.classList.contains("is-collapsed") && !appState.previewMaximized && !sourcePanel.hidden;
+    }
+
+    function flashSourceInputSync() {
+      window.clearTimeout(appState.sourceSyncFlashTimer);
+      sourceInput.classList.add("is-preview-synced");
+      appState.sourceSyncFlashTimer = window.setTimeout(() => {
+        sourceInput.classList.remove("is-preview-synced");
+      }, 700);
+    }
+
+    function getSourceLookupIndex(source = sourceInput.value || "") {
+      const rawSource = String(source || "");
+      const cached = appState.sourceLookupCache;
+      if (cached?.rawSource === rawSource) {
+        return cached;
+      }
+
+      let normalizedSource = "";
+      let rawCursor = 0;
+      let normalizedCursor = 0;
+      const segments = [];
+      let match;
+      SOURCE_LOOKUP_DATA_URL_PATTERN.lastIndex = 0;
+
+      while ((match = SOURCE_LOOKUP_DATA_URL_PATTERN.exec(rawSource))) {
+        const rawValue = match[0];
+        const rawStart = match.index;
+        const rawEnd = rawStart + rawValue.length;
+        const normalizedToken = normalizeDataUrlForLookup(rawValue);
+        const shouldTokenize = normalizedToken !== rawValue;
+
+        if (!shouldTokenize) {
+          continue;
+        }
+
+        if (rawCursor < rawStart) {
+          const unchanged = rawSource.slice(rawCursor, rawStart);
+          segments.push({
+            kind: "identity",
+            rawStart: rawCursor,
+            rawEnd: rawStart,
+            normalizedStart: normalizedCursor,
+            normalizedEnd: normalizedCursor + unchanged.length
+          });
+          normalizedSource += unchanged;
+          normalizedCursor += unchanged.length;
+        }
+
+        segments.push({
+          kind: "token",
+          rawStart,
+          rawEnd,
+          normalizedStart: normalizedCursor,
+          normalizedEnd: normalizedCursor + normalizedToken.length
+        });
+        normalizedSource += normalizedToken;
+        normalizedCursor += normalizedToken.length;
+        rawCursor = rawEnd;
+      }
+
+      if (rawCursor < rawSource.length) {
+        const unchanged = rawSource.slice(rawCursor);
+        segments.push({
+          kind: "identity",
+          rawStart: rawCursor,
+          rawEnd: rawSource.length,
+          normalizedStart: normalizedCursor,
+          normalizedEnd: normalizedCursor + unchanged.length
+        });
+        normalizedSource += unchanged;
+      }
+
+      const index = {
+        rawSource,
+        normalizedSource,
+        segments: segments.length ? segments : [{
+          kind: "identity",
+          rawStart: 0,
+          rawEnd: rawSource.length,
+          normalizedStart: 0,
+          normalizedEnd: rawSource.length
+        }]
+      };
+
+      appState.sourceLookupCache = index;
+      return index;
+    }
+
+    function normalizeDataUrlForLookup(value) {
+      const source = String(value || "");
+      const commaIndex = source.indexOf(",");
+      if (commaIndex === -1) {
+        return source;
+      }
+
+      const header = source.slice(0, commaIndex + 1);
+      const payload = source.slice(commaIndex + 1);
+      const compactPayload = payload.replace(/\s+/g, "");
+      if (compactPayload.length < SOURCE_LOOKUP_DATA_URL_THRESHOLD) {
+        return source;
+      }
+
+      return `${header}__EDITOR_DATA_URL_${compactPayload.length}_${hashLookupString(compactPayload)}__`;
+    }
+
+    function hashLookupString(value) {
+      let hash = 2166136261;
+      for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(36);
+    }
+
+    function normalizeLookupCandidate(candidate) {
+      return normalizeDataUrlForLookup(String(candidate || "").replace(/\r\n?/g, "\n"));
+    }
+
+    function rawOffsetToNormalized(sourceIndex, rawOffset, preferEnd = false) {
+      const target = clamp(Math.max(0, rawOffset), 0, sourceIndex.rawSource.length);
+
+      for (const segment of sourceIndex.segments) {
+        const isInside = preferEnd
+          ? target > segment.rawStart && target <= segment.rawEnd
+          : target >= segment.rawStart && target < segment.rawEnd;
+
+        if (!isInside) {
+          continue;
+        }
+
+        if (segment.kind === "identity") {
+          return segment.normalizedStart + (target - segment.rawStart);
+        }
+
+        return preferEnd ? segment.normalizedEnd : segment.normalizedStart;
+      }
+
+      return sourceIndex.normalizedSource.length;
+    }
+
+    function normalizedOffsetToRaw(sourceIndex, normalizedOffset, preferEnd = false) {
+      const target = clamp(Math.max(0, normalizedOffset), 0, sourceIndex.normalizedSource.length);
+
+      for (const segment of sourceIndex.segments) {
+        const isInside = preferEnd
+          ? target > segment.normalizedStart && target <= segment.normalizedEnd
+          : target >= segment.normalizedStart && target < segment.normalizedEnd;
+
+        if (!isInside) {
+          continue;
+        }
+
+        if (segment.kind === "identity") {
+          return segment.rawStart + (target - segment.normalizedStart);
+        }
+
+        return preferEnd ? segment.rawEnd : segment.rawStart;
+      }
+
+      return sourceIndex.rawSource.length;
+    }
+
+    function getSourceRevealMetrics(index) {
+      const rawValue = sourceInput.value || "";
+      const safeIndex = clamp(Math.max(0, index), 0, rawValue.length);
+      const before = rawValue.slice(0, safeIndex);
+      const lineIndex = before.split("\n").length - 1;
+      const lineStart = before.lastIndexOf("\n") + 1;
+      const linePrefix = before.slice(lineStart);
+      const computed = window.getComputedStyle(sourceInput);
+      const lineHeight = Number.parseFloat(computed.lineHeight) || Math.max(18, Number.parseFloat(computed.fontSize) * 1.5 || 24);
+      return {
+        top: lineIndex * lineHeight,
+        left: measureSourceLineWidth(linePrefix, computed),
+        lineHeight
+      };
+    }
+
+    function measureSourceLineWidth(text, computedStyle) {
+      const canvas = measureSourceLineWidth.canvas || (measureSourceLineWidth.canvas = document.createElement("canvas"));
+      const context = canvas.getContext("2d");
+      if (!context) {
+        return 0;
+      }
+
+      context.font = computedStyle.font;
+      const tabSize = Math.max(1, Number.parseInt(computedStyle.tabSize || sourceInput.style.tabSize || "2", 10) || 2);
+      const spaceWidth = context.measureText(" ").width || Number.parseFloat(computedStyle.fontSize) * 0.5 || 8;
+      const averageDataCharWidth = context.measureText(SOURCE_LOOKUP_MEASURE_SAMPLE).width / SOURCE_LOOKUP_MEASURE_SAMPLE.length || spaceWidth;
+
+      let width = 0;
+      let cursor = 0;
+      let match;
+      SOURCE_LOOKUP_DATA_URL_PATTERN.lastIndex = 0;
+
+      while ((match = SOURCE_LOOKUP_DATA_URL_PATTERN.exec(text))) {
+        width += measurePlainSourceSegment(text.slice(cursor, match.index), context, tabSize, spaceWidth);
+        width += estimateOpaqueDataUrlWidth(match[0], context, averageDataCharWidth, tabSize, spaceWidth);
+        cursor = match.index + match[0].length;
+      }
+
+      width += measurePlainSourceSegment(text.slice(cursor), context, tabSize, spaceWidth);
+      return width;
+    }
+
+    function measurePlainSourceSegment(segment, context, tabSize, spaceWidth) {
+      const normalized = String(segment || "").replace(/\t/g, " ".repeat(tabSize));
+      if (!normalized) {
+        return 0;
+      }
+
+      return context.measureText(normalized).width + countSourceSegmentNewlines(segment) * spaceWidth;
+    }
+
+    function countSourceSegmentNewlines(segment) {
+      return (String(segment || "").match(/\n/g) || []).length;
+    }
+
+    function estimateOpaqueDataUrlWidth(dataUrl, context, averageCharWidth, tabSize, spaceWidth) {
+      const source = String(dataUrl || "");
+      const commaIndex = source.indexOf(",");
+      if (commaIndex === -1) {
+        return measurePlainSourceSegment(source, context, tabSize, spaceWidth);
+      }
+
+      const header = source.slice(0, commaIndex + 1);
+      const payload = source.slice(commaIndex + 1);
+      const compactPayload = payload.replace(/\s+/g, "");
+      return measurePlainSourceSegment(header, context, tabSize, spaceWidth)
+        + compactPayload.length * averageCharWidth;
+    }
+
+    function revealSourceRange(start, end = start) {
+      if (!isSourcePanelVisible()) {
+        return;
+      }
+
+      const rawValue = sourceInput.value || "";
+      const safeStart = clamp(Math.max(0, start), 0, rawValue.length);
+      const safeEnd = clamp(Math.max(safeStart, end), 0, rawValue.length);
+      const metrics = getSourceRevealMetrics(safeStart);
+
+      sourceInput.setSelectionRange(safeStart, safeEnd);
+      sourceInput.scrollTop = Math.max(0, metrics.top - sourceInput.clientHeight * 0.28);
+      sourceInput.scrollLeft = Math.max(0, metrics.left - sourceInput.clientWidth * 0.18);
+      flashSourceInputSync();
+    }
+
+    function syncSourceEditorToPreviewTarget(target) {
+      if (!target || !isSourcePanelVisible()) {
+        return;
+      }
+
+      const range = isRemarkMode()
+        ? findRemarkSourceRangeForPreviewTarget(target)
+        : findNormalSourceRangeForPreviewTarget(target);
+
+      if (!range) {
+        return;
+      }
+
+      revealSourceRange(range.start, range.end);
+    }
+
+    function findNormalSourceRangeForPreviewTarget(target) {
+      const targetElement = resolvePreviewTargetForSourceLookup(target);
+      if (!targetElement) {
+        return null;
+      }
+
+      const sourceIndex = getSourceLookupIndex();
+      const candidates = buildNormalSourceSearchCandidates(targetElement);
+      return findBestSourceRange(sourceIndex, candidates);
+    }
+
+    function findRemarkSourceRangeForPreviewTarget(target) {
+      const targetElement = resolvePreviewTargetForSourceLookup(target);
+      const slidePage = targetElement?.closest?.("[data-remark-slide-id]");
+      if (!slidePage) {
+        return null;
+      }
+
+      const slideRange = getRemarkSlideSourceRange(slidePage.getAttribute("data-remark-slide-id"));
+      if (!slideRange) {
+        return null;
+      }
+
+      const focusNode = targetElement.closest("[data-remark-block], [data-remark-class-wrapper='true'], [data-builder-node]") || slidePage;
+      if (focusNode === slidePage) {
+        return { start: slideRange.start, end: slideRange.bodyStart ?? slideRange.start };
+      }
+
+      const serialized = serializeRemarkSlideNode(focusNode);
+      const candidates = [serialized];
+
+      if (isCodeBlockElement(focusNode)) {
+        const codeText = focusNode.querySelector("code")?.textContent || "";
+        candidates.push(codeText);
+      } else {
+        candidates.push(getMeaningfulTextCandidate(focusNode));
+      }
+
+      return findBestSourceRange(getSourceLookupIndex(), candidates, {
+        segmentStart: slideRange.start,
+        segmentEnd: slideRange.end
+      }) || { start: slideRange.start, end: slideRange.bodyStart ?? slideRange.start };
+    }
+
+    function resolvePreviewTargetForSourceLookup(target) {
+      const activeCodePre = appState.activeCodeEditor?.preElement;
+      if (target?.matches?.("[data-editor-code-editor='true']") && activeCodePre) {
+        return activeCodePre;
+      }
+
+      return target?.closest?.("[data-editor-selectable='true'], [data-editor-page='true']") || target || null;
+    }
+
+    function buildNormalSourceSearchCandidates(element) {
+      const candidates = [];
+      const cleaned = cloneElementForSourceLookup(element);
+
+      if (cleaned?.outerHTML) {
+        candidates.push(cleaned.outerHTML.trim());
+      }
+
+      if (isCodeBlockElement(element)) {
+        const code = element.querySelector("code");
+        const codeText = code?.textContent || "";
+        const escapedCode = escapeHtml(codeText);
+        if (codeText) {
+          candidates.push(`<code>${escapedCode}</code>`);
+          candidates.push(codeText);
+        }
+      }
+
+      if (cleaned?.tagName === "IMG") {
+        candidates.push(cleaned.getAttribute("src") || "");
+        candidates.push(cleaned.getAttribute("alt") || "");
+      }
+
+      candidates.push(getMeaningfulTextCandidate(cleaned));
+      return candidates;
+    }
+
+    function cloneElementForSourceLookup(element) {
+      if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return null;
+      }
+
+      const clone = element.cloneNode(true);
+      stripPreviewOnlyCodeDecorations(clone);
+      const nodes = [clone, ...clone.querySelectorAll("*")];
+
+      nodes.forEach((node) => {
+        finalizeClonedTransform(node);
+        node.removeAttribute("contenteditable");
+        node.removeAttribute("spellcheck");
+        Array.from(node.attributes).forEach((attribute) => {
+          if (attribute.name.startsWith("data-editor-") || attribute.name.startsWith("data-builder-")) {
+            node.removeAttribute(attribute.name);
+          }
+        });
+      });
+
+      return clone;
+    }
+
+    function getMeaningfulTextCandidate(element) {
+      return String(element?.textContent || "").replace(/\s+/g, " ").trim();
+    }
+
+    function findBestSourceRange(sourceOrIndex, candidates, options = {}) {
+      const sourceIndex = typeof sourceOrIndex === "string" ? getSourceLookupIndex(sourceOrIndex) : sourceOrIndex;
+      const normalizedHaystack = sourceIndex.normalizedSource;
+      const normalizedStart = rawOffsetToNormalized(sourceIndex, options.segmentStart || 0);
+      const normalizedEnd = rawOffsetToNormalized(sourceIndex, options.segmentEnd ?? sourceIndex.rawSource.length, true);
+      const segment = normalizedHaystack.slice(normalizedStart, normalizedEnd);
+      const uniqueCandidates = Array.from(new Set(
+        candidates
+          .map((candidate) => normalizeLookupCandidate(candidate).trim())
+          .filter((candidate) => candidate.length >= 2)
+      ));
+
+      for (const candidate of uniqueCandidates) {
+        const exactIndex = segment.indexOf(candidate);
+        if (exactIndex !== -1) {
+          const exactStart = normalizedStart + exactIndex;
+          const exactEnd = exactStart + candidate.length;
+          return {
+            start: normalizedOffsetToRaw(sourceIndex, exactStart),
+            end: normalizedOffsetToRaw(sourceIndex, exactEnd, true)
+          };
+        }
+      }
+
+      for (const candidate of uniqueCandidates) {
+        const phrase = candidate.replace(/\s+/g, " ").trim();
+        if (phrase.length < 4) {
+          continue;
+        }
+
+        const textIndex = segment.indexOf(phrase);
+        if (textIndex !== -1) {
+          const textStart = normalizedStart + textIndex;
+          const textEnd = textStart + phrase.length;
+          return {
+            start: normalizedOffsetToRaw(sourceIndex, textStart),
+            end: normalizedOffsetToRaw(sourceIndex, textEnd, true)
+          };
+        }
+      }
+
+      return null;
+    }
+
+    function getRemarkSlideSourceRange(slideId) {
+      const slides = appState.documentModel?.slides || [];
+      let cursor = 0;
+
+      for (let index = 0; index < slides.length; index += 1) {
+        const slide = slides[index];
+        const slideSource = buildRemarkSlideSource(slide);
+        const start = cursor;
+        const end = start + slideSource.length;
+
+        if (slide.id === slideId) {
+          return {
+            start,
+            end,
+            bodyStart: start + getRemarkSlideBodyOffset(slide)
+          };
+        }
+
+        cursor = end + (index < slides.length - 1 ? "\n\n---\n\n".length : 0);
+      }
+
+      return null;
+    }
+
+    function getRemarkSlideBodyOffset(slide) {
+      const metadataLines = slide.directives.map(serializeRemarkDirective).filter(Boolean);
+      const body = trimSurroundingBlankLines(slide.bodySource || "");
+      const notes = trimSurroundingBlankLines(slide.notesSource || "");
+      let offset = 0;
+
+      if (metadataLines.length) {
+        offset += metadataLines.join("\n").length;
+        if (body || notes) {
+          offset += 2;
+        }
+      }
+
+      return offset;
     }
 
     function handleSlideClassInput() {
