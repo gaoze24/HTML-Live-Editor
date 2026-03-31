@@ -465,7 +465,8 @@
     }
 
     #textControlsGroup,
-    #imageControlsGroup {
+    #imageControlsGroup,
+    #codeControlsGroup {
       min-width: max-content;
     }
 
@@ -1126,6 +1127,7 @@
             <button class="ghost-button" id="newPageButton" type="button">New Page</button>
             <button class="ghost-button" id="addTextButton" type="button">Add Text</button>
             <button class="ghost-button" id="addImageButton" type="button">Add Image</button>
+            <button class="ghost-button" id="addCodeButton" type="button">Add Code</button>
             <button class="primary-button" id="exportButton" type="button">Export HTML</button>
           </div>
 
@@ -1181,6 +1183,16 @@
             <label class="toolbar-control">
               <span>Size</span>
               <input id="fontSizeControl" type="number" min="10" max="160" step="1" value="28">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Width</span>
+              <input id="textWidthControl" type="number" min="80" step="1" value="320">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Height</span>
+              <input id="textHeightControl" type="number" min="48" step="1" value="72">
             </label>
 
             <label class="toolbar-control">
@@ -1267,6 +1279,31 @@
                 <option value="warm">Warm</option>
                 <option value="cool">Cool</option>
               </select>
+            </label>
+          </div>
+
+          <div class="toolbar__group" id="codeControlsGroup" hidden>
+            <label class="toolbar-control toolbar-control--wide">
+              <span>Language</span>
+              <select id="codeLanguageControl">
+                <option value="">Plain Text</option>
+                <option value="java">Java</option>
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="c++">C++</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+              </select>
+            </label>
+
+            <label class="toolbar-control">
+              <span>Width</span>
+              <input id="codeWidthControl" type="number" min="120" step="1" value="480">
+            </label>
+
+            <label class="toolbar-control">
+              <span>Height</span>
+              <input id="codeHeightControl" type="number" min="96" step="1" value="180">
             </label>
           </div>
 
@@ -1673,6 +1710,10 @@ Edit the slide source on the left, or add text and images directly in the previe
     const CODE_LANGUAGE_ALIASES = Object.freeze({
       bash: "bash",
       css: "css",
+      cc: "c++",
+      cpp: "c++",
+      cxx: "c++",
+      "c++": "c++",
       cjs: "javascript",
       htm: "markup",
       html: "markup",
@@ -1697,6 +1738,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
     const SUPPORTED_CODE_LANGUAGES = new Set([
       "bash",
+      "c++",
       "css",
       "java",
       "javascript",
@@ -1710,6 +1752,8 @@ Edit the slide source on the left, or add text and images directly in the previe
       <style id="editor-preview-style">
         html[data-editor-preview-root="true"] {
           min-height: 100%;
+          --editor-resize-hit-size: 16px;
+          --editor-resize-visual-size: 8px;
           --editor-code-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(23, 37, 67, 0.98));
           --editor-code-border: rgba(88, 166, 255, 0.18);
           --editor-code-foreground: #e8eefc;
@@ -1788,6 +1832,11 @@ Edit the slide source on the left, or add text and images directly in the previe
           box-sizing: border-box;
         }
 
+        html[data-editor-preview-root="true"] body[data-editor-mode="normal-html"] {
+          --editor-resize-hit-size: 18px;
+          --editor-resize-visual-size: 7px;
+        }
+
         :where([data-editor-page="true"][data-editor-page-kind="explicit"]),
         :where([data-editor-page="true"][data-editor-page-kind="builder"]),
         :where([data-editor-page="true"][data-editor-page-kind="remark"]) {
@@ -1846,6 +1895,19 @@ Edit the slide source on the left, or add text and images directly in the previe
 
         :where([data-builder-node="text"]) {
           cursor: text;
+        }
+
+        :where([data-builder-node="text"]),
+        :where([data-builder-node="code"]),
+        :where([data-builder-node="image"]) {
+          align-self: flex-start;
+          justify-self: start;
+          margin: 0;
+        }
+
+        :where([data-builder-node="code"]) {
+          cursor: text;
+          text-align: left;
         }
 
         :where([data-builder-node="image"]) {
@@ -1928,8 +1990,77 @@ Edit the slide source on the left, or add text and images directly in the previe
           display: none;
         }
 
+        :where([data-editor-resize-handle="true"]) {
+          all: initial;
+          box-sizing: border-box;
+          display: block;
+          position: absolute;
+          width: var(--editor-resize-hit-size, 16px);
+          height: var(--editor-resize-hit-size, 16px);
+          border-radius: 999px;
+          border: 0;
+          background: transparent;
+          pointer-events: auto;
+        }
+
+        :where([data-editor-resize-handle="true"])::before {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: var(--editor-resize-visual-size, 8px);
+          height: var(--editor-resize-visual-size, 8px);
+          border-radius: 999px;
+          border: 1px solid rgba(15, 123, 255, 0.45);
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 0 0 1px rgba(15, 123, 255, 0.18);
+          transform: translate(-50%, -50%);
+          transition:
+            box-shadow 140ms ease,
+            border-color 140ms ease,
+            background-color 140ms ease;
+        }
+
+        :where([data-editor-resize-handle="true"]:hover)::before {
+          border-color: rgba(15, 123, 255, 0.62);
+          box-shadow: 0 0 0 2px rgba(15, 123, 255, 0.16);
+          background: #ffffff;
+        }
+
+        :where([data-editor-resize-handle="true"][hidden]) {
+          display: none;
+        }
+
+        :where([data-editor-resize-handle="true"][data-resize-direction="nw"]) {
+          left: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          top: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          cursor: nwse-resize;
+        }
+
+        :where([data-editor-resize-handle="true"][data-resize-direction="ne"]) {
+          right: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          top: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          cursor: nesw-resize;
+        }
+
+        :where([data-editor-resize-handle="true"][data-resize-direction="sw"]) {
+          left: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          bottom: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          cursor: nesw-resize;
+        }
+
+        :where([data-editor-resize-handle="true"][data-resize-direction="se"]) {
+          right: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          bottom: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
+          cursor: nwse-resize;
+        }
+
         :where([data-editor-dragging="true"]) {
           cursor: grabbing !important;
+        }
+
+        :where([data-editor-resizing="true"]) {
+          cursor: nwse-resize !important;
         }
 
         :where([data-editor-slide-baseline="true"]) {
@@ -2119,10 +2250,19 @@ Edit the slide source on the left, or add text and images directly in the previe
           border: 1px solid var(--editor-code-border);
           background: var(--editor-code-bg);
           color: var(--editor-code-foreground);
+          font-family: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", "Fira Code", "Courier New", monospace;
+          font-size: 0.94rem;
+          line-height: 1.65;
+          white-space: pre;
+          tab-size: 2;
           overflow: auto;
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.06),
             0 14px 30px rgba(15, 23, 42, 0.14);
+        }
+
+        html[data-editor-preview-root="true"] :where(pre[data-editor-code-block="true"][data-editor-highlighted="true"]) {
+          caret-color: #8fd6ff;
         }
 
         html[data-editor-preview-root="true"] :where(pre[data-editor-code-block="true"] > code) {
@@ -2137,65 +2277,65 @@ Edit the slide source on the left, or add text and images directly in the previe
           background: transparent;
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token]) {
           color: var(--editor-code-foreground);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="comment"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="comment"]) {
           color: var(--editor-code-comment);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="keyword"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="keyword"]) {
           color: var(--editor-code-keyword);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="string"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="string"]) {
           color: var(--editor-code-string);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="number"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="number"]) {
           color: var(--editor-code-number);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="function"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="function"]) {
           color: var(--editor-code-function);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="type"]),
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="decorator"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="type"]),
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="decorator"]) {
           color: var(--editor-code-type);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="property"]),
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="builtin"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="property"]),
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="builtin"]) {
           color: var(--editor-code-property);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="tag"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="tag"]) {
           color: var(--editor-code-tag);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="attr-name"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="attr-name"]) {
           color: var(--editor-code-attr-name);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="attr-value"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="attr-value"]) {
           color: var(--editor-code-attr-value);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="operator"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="operator"]) {
           color: var(--editor-code-operator);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="variable"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="variable"]) {
           color: var(--editor-code-variable);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="entity"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="entity"]) {
           color: var(--editor-code-entity);
         }
 
-        html[data-editor-preview-root="true"] :where(code[data-editor-highlighted="true"] [data-editor-code-token="punctuation"]) {
+        html[data-editor-preview-root="true"] :where([data-editor-highlighted="true"] [data-editor-code-token="punctuation"]) {
           color: var(--editor-code-punctuation);
         }
       </style>
@@ -2256,6 +2396,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     const newPageButton = document.getElementById("newPageButton");
     const addTextButton = document.getElementById("addTextButton");
     const addImageButton = document.getElementById("addImageButton");
+    const addCodeButton = document.getElementById("addCodeButton");
     const exportButton = document.getElementById("exportButton");
     const imagePicker = document.getElementById("imagePicker");
     const htmlImportPicker = document.getElementById("htmlImportPicker");
@@ -2294,6 +2435,12 @@ Edit the slide source on the left, or add text and images directly in the previe
     const slideClassControl = document.getElementById("slideClassControl");
     const textControlsGroup = document.getElementById("textControlsGroup");
     const imageControlsGroup = document.getElementById("imageControlsGroup");
+    const codeControlsGroup = document.getElementById("codeControlsGroup");
+    const codeLanguageControl = document.getElementById("codeLanguageControl");
+    const textWidthControl = document.getElementById("textWidthControl");
+    const textHeightControl = document.getElementById("textHeightControl");
+    const codeWidthControl = document.getElementById("codeWidthControl");
+    const codeHeightControl = document.getElementById("codeHeightControl");
     const fontFamilyControl = document.getElementById("fontFamilyControl");
     const fontSizeControl = document.getElementById("fontSizeControl");
     const fontWeightControl = document.getElementById("fontWeightControl");
@@ -2331,6 +2478,20 @@ Edit the slide source on the left, or add text and images directly in the previe
       imageRotateControl,
       imageObjectFitControl,
       imageFilterControl
+    ];
+
+    const codeStyleControls = [
+      codeLanguageControl
+    ];
+
+    const textSizeControls = [
+      textWidthControl,
+      textHeightControl
+    ];
+
+    const codeSizeControls = [
+      codeWidthControl,
+      codeHeightControl
     ];
 
     function initialize() {
@@ -2394,6 +2555,7 @@ Edit the slide source on the left, or add text and images directly in the previe
 
       newPageButton.addEventListener("click", createNewPage);
       addTextButton.addEventListener("click", addTextBoxToCurrentPage);
+      addCodeButton.addEventListener("click", addCodeBlockToCurrentPage);
 
       addImageButton.addEventListener("click", () => {
         const previewDocument = previewFrame.contentDocument;
@@ -2460,6 +2622,14 @@ Edit the slide source on the left, or add text and images directly in the previe
         applyInlineStyleToSelection("fontSize", `${size}px`);
       });
 
+      textWidthControl.addEventListener("input", () => {
+        applyTextBlockDimension("width", textWidthControl.value);
+      });
+
+      textHeightControl.addEventListener("input", () => {
+        applyTextBlockDimension("height", textHeightControl.value);
+      });
+
       fontWeightControl.addEventListener("change", () => {
         applyInlineStyleToSelection("fontWeight", fontWeightControl.value);
       });
@@ -2521,6 +2691,18 @@ Edit the slide source on the left, or add text and images directly in the previe
       imageFilterControl.addEventListener("change", () => {
         const preset = IMAGE_FILTER_PRESETS[imageFilterControl.value] || "none";
         applyImageStyle("filter", preset);
+      });
+
+      codeLanguageControl.addEventListener("change", () => {
+        applyCodeLanguageToSelection(codeLanguageControl.value);
+      });
+
+      codeWidthControl.addEventListener("input", () => {
+        applyCodeBlockDimension("width", codeWidthControl.value);
+      });
+
+      codeHeightControl.addEventListener("input", () => {
+        applyCodeBlockDimension("height", codeHeightControl.value);
       });
     }
 
@@ -3428,69 +3610,202 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 </section>`;
     }
 
-    function applyCodeSyntaxHighlighting(previewDocument) {
+    function applyCodeSyntaxHighlighting(previewDocument, options = {}) {
       if (!previewDocument) {
         return;
       }
 
-      previewDocument.querySelectorAll("pre code").forEach((codeElement) => {
-        highlightPreviewCodeBlock(codeElement);
+      const candidates = new Set();
+      previewDocument.querySelectorAll("pre[data-remark-block='code'], pre[data-builder-node='code'], pre code").forEach((node) => {
+        const preElement = node.tagName === "PRE" ? node : node.closest("pre");
+        if (isHighlightableCodePre(preElement)) {
+          candidates.add(preElement);
+        }
+      });
+
+      candidates.forEach((preElement) => {
+        highlightPreviewCodeBlock(preElement, options);
       });
     }
 
-    function highlightPreviewCodeBlock(codeElement) {
-      if (!codeElement || codeElement.tagName !== "CODE") {
-        return;
+    function isHighlightableCodePre(preElement) {
+      if (!preElement || preElement.tagName !== "PRE") {
+        return false;
       }
 
-      const preElement = codeElement.parentElement;
+      return preElement.getAttribute("data-remark-block") === "code"
+        || preElement.getAttribute("data-builder-node") === "code"
+        || preElement.firstElementChild?.tagName === "CODE";
+    }
+
+    function resolveCodeBlockFromElement(element) {
+      if (!element) {
+        return null;
+      }
+
+      const preElement = element.closest("pre");
+      return isHighlightableCodePre(preElement) ? preElement : null;
+    }
+
+    function ensureUnifiedCodeBlockStructure(preElement) {
       if (!preElement || preElement.tagName !== "PRE") {
         return;
       }
 
-      if (hasForeignCodeMarkup(codeElement)) {
+      const directCode = preElement.firstElementChild;
+      if (directCode && directCode.tagName === "CODE" && preElement.children.length === 1) {
+        preElement.textContent = directCode.textContent || "";
+      }
+    }
+
+    function isCodeBlockFocused(preElement) {
+      const activeElement = preElement?.ownerDocument?.activeElement;
+      return Boolean(activeElement && (activeElement === preElement || preElement.contains(activeElement)));
+    }
+
+    function readCodeBlockContent(preElement) {
+      return ((preElement.innerText || preElement.textContent) || "").replace(/\r\n?/g, "\n");
+    }
+
+    function getCodeBlockSelectionOffsets(preElement) {
+      const selection = preElement?.ownerDocument?.defaultView?.getSelection?.();
+      if (!selection || !selection.rangeCount) {
+        return null;
+      }
+
+      const range = selection.getRangeAt(0);
+      if (!preElement.contains(range.startContainer) || !preElement.contains(range.endContainer)) {
+        return null;
+      }
+
+      const startRange = range.cloneRange();
+      startRange.selectNodeContents(preElement);
+      startRange.setEnd(range.startContainer, range.startOffset);
+
+      const endRange = range.cloneRange();
+      endRange.selectNodeContents(preElement);
+      endRange.setEnd(range.endContainer, range.endOffset);
+
+      return {
+        start: startRange.toString().length,
+        end: endRange.toString().length
+      };
+    }
+
+    function resolveCodeBlockTextPosition(preElement, charOffset) {
+      const documentNode = preElement.ownerDocument;
+      const showText = documentNode.defaultView?.NodeFilter?.SHOW_TEXT || 4;
+      const walker = documentNode.createTreeWalker(preElement, showText);
+      let remaining = Math.max(0, Number(charOffset) || 0);
+      let current = null;
+
+      while ((current = walker.nextNode())) {
+        const length = current.textContent?.length || 0;
+        if (remaining <= length) {
+          return { node: current, offset: remaining };
+        }
+
+        remaining -= length;
+      }
+
+      return { node: preElement, offset: preElement.childNodes.length };
+    }
+
+    function restoreCodeBlockSelection(preElement, offsets) {
+      if (!offsets) {
         return;
       }
 
-      const rawCode = codeElement.textContent || "";
-      const language = detectCodeLanguage(codeElement, preElement);
-      const highlightedHtml = renderHighlightedCode(rawCode, language);
-
-      preElement.setAttribute("data-editor-code-block", "true");
-      codeElement.setAttribute("data-editor-code-block", "true");
-      codeElement.setAttribute("data-editor-highlighted", "true");
-
-      if (language) {
-        preElement.setAttribute("data-editor-code-language", language);
-        codeElement.setAttribute("data-editor-code-language", language);
-      } else {
-        preElement.removeAttribute("data-editor-code-language");
-        codeElement.removeAttribute("data-editor-code-language");
+      const selection = preElement.ownerDocument.defaultView?.getSelection?.();
+      if (!selection) {
+        return;
       }
 
-      codeElement.innerHTML = highlightedHtml;
+      const start = resolveCodeBlockTextPosition(preElement, offsets.start);
+      const end = resolveCodeBlockTextPosition(preElement, offsets.end);
+      const range = preElement.ownerDocument.createRange();
+
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
 
-    function hasForeignCodeMarkup(codeElement) {
-      return Array.from(codeElement.children).some((child) => {
-        return !child.hasAttribute("data-editor-code-token");
+    function scheduleCodeBlockHighlight(preElement) {
+      if (!isHighlightableCodePre(preElement)) {
+        return;
+      }
+
+      if (preElement.getAttribute("data-editor-code-highlight-pending") === "true") {
+        return;
+      }
+
+      preElement.setAttribute("data-editor-code-highlight-pending", "true");
+      const view = preElement.ownerDocument.defaultView || window;
+      const schedule = typeof view.requestAnimationFrame === "function"
+        ? view.requestAnimationFrame.bind(view)
+        : (callback) => view.setTimeout(callback, 16);
+      schedule(() => {
+        if (!preElement.isConnected) {
+          return;
+        }
+
+        preElement.removeAttribute("data-editor-code-highlight-pending");
+        highlightPreviewCodeBlock(preElement, { force: true, preserveCaret: true });
       });
     }
 
-    function detectCodeLanguage(codeElement, preElement) {
+    function highlightPreviewCodeBlock(preElement, options = {}) {
+      if (!isHighlightableCodePre(preElement)) {
+        return;
+      }
+
+      ensureUnifiedCodeBlockStructure(preElement);
+
+      const force = Boolean(options.force);
+      const preserveCaret = Boolean(options.preserveCaret) || isCodeBlockFocused(preElement);
+      const selectionOffsets = preserveCaret ? getCodeBlockSelectionOffsets(preElement) : null;
+      const rawCode = readCodeBlockContent(preElement);
+      const language = detectCodeLanguage(preElement);
+      const highlightedHtml = renderHighlightedCode(rawCode, language);
+      const currentLanguage = preElement.getAttribute("data-editor-code-language") || "";
+      const isAlreadyHighlighted = preElement.getAttribute("data-editor-highlighted") === "true";
+
+      if (!force && isAlreadyHighlighted && currentLanguage === language && preElement.innerHTML === highlightedHtml) {
+        return;
+      }
+
+      preElement.setAttribute("data-editor-code-block", "true");
+      preElement.setAttribute("data-editor-highlighted", "true");
+
+      if (language) {
+        preElement.setAttribute("data-editor-code-language", language);
+      } else {
+        preElement.removeAttribute("data-editor-code-language");
+      }
+
+      preElement.innerHTML = highlightedHtml;
+
+      if (selectionOffsets) {
+        restoreCodeBlockSelection(preElement, selectionOffsets);
+      }
+    }
+
+    function detectCodeLanguage(preElement) {
+      const legacyCodeElement = preElement?.firstElementChild?.tagName === "CODE" ? preElement.firstElementChild : null;
       const candidates = [
         preElement?.getAttribute("data-remark-language"),
         extractFenceLanguage(preElement?.getAttribute("data-remark-fence-info")),
-        codeElement?.getAttribute("data-language"),
         preElement?.getAttribute("data-language"),
-        codeElement?.getAttribute("data-lang"),
+        legacyCodeElement?.getAttribute("data-language"),
         preElement?.getAttribute("data-lang"),
-        codeElement?.getAttribute("lang"),
+        legacyCodeElement?.getAttribute("data-lang"),
         preElement?.getAttribute("lang"),
-        extractCodeLanguageFromType(codeElement?.getAttribute("type")),
+        legacyCodeElement?.getAttribute("lang"),
         extractCodeLanguageFromType(preElement?.getAttribute("type")),
-        extractCodeLanguageFromClassNames(codeElement?.className),
-        extractCodeLanguageFromClassNames(preElement?.className)
+        extractCodeLanguageFromType(legacyCodeElement?.getAttribute("type")),
+        extractCodeLanguageFromClassNames(preElement?.className),
+        extractCodeLanguageFromClassNames(legacyCodeElement?.className)
       ];
 
       return candidates.map(normalizeCodeLanguage).find(Boolean) || "";
@@ -3566,6 +3881,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           case "javascript":
           case "typescript":
           case "java":
+          case "c++":
             return highlightClikeCode(safeSource, normalizedLanguage);
           case "python":
             return highlightPythonCode(safeSource);
@@ -3583,13 +3899,15 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const keywordsByLanguage = {
         java: "abstract assert break case catch class const continue default do else enum extends final finally for if implements import instanceof interface native new package private protected public return static strictfp super switch synchronized this throw throws transient try volatile while boolean byte char double float int long short void var record sealed permits non-sealed",
         javascript: "await break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new of return static super switch this throw try typeof var void while with yield async null true false",
-        typescript: "abstract as asserts await break case catch class const continue debugger declare default delete do else enum export extends finally for function if implements import in infer instanceof interface is keyof let namespace never new of override private protected public readonly return satisfies static super switch this throw try type typeof unique var void while with yield async null true false"
+        typescript: "abstract as asserts await break case catch class const continue debugger declare default delete do else enum export extends finally for function if implements import in infer instanceof interface is keyof let namespace never new of override private protected public readonly return satisfies static super switch this throw try type typeof unique var void while with yield async null true false",
+        "c++": "alignas alignof and and_eq asm auto bitand bitor bool break case catch char char8_t char16_t char32_t class compl concept const consteval constexpr constinit const_cast continue co_await co_return co_yield decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not not_eq nullptr operator or or_eq private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq"
       };
 
       const builtinsByLanguage = {
         java: "String System Integer Long Double Float Boolean Math List Map Set ArrayList HashMap Optional Objects Arrays Stream Runnable Exception RuntimeException",
         javascript: "Array Boolean Date Error JSON Map Math Number Object Promise RegExp Set String console document window globalThis Intl URL fetch",
-        typescript: "Array Boolean Date Error JSON Map Math Number Object Promise RegExp Set String console document window globalThis Intl URL fetch Partial Pick Record Omit Readonly"
+        typescript: "Array Boolean Date Error JSON Map Math Number Object Promise RegExp Set String console document window globalThis Intl URL fetch Partial Pick Record Omit Readonly",
+        "c++": "std size_t string vector map set unordered_map unordered_set optional variant any pair tuple shared_ptr unique_ptr weak_ptr cout cin cerr endl nullptr_t int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t"
       };
 
       return tokenizeCode(source, [
@@ -3800,7 +4118,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return;
       }
 
-      root.querySelectorAll("code[data-editor-highlighted='true']").forEach((codeElement) => {
+      root.querySelectorAll("[data-editor-highlighted='true']").forEach((codeElement) => {
         codeElement.textContent = codeElement.textContent;
         codeElement.removeAttribute("data-editor-highlighted");
       });
@@ -4178,6 +4496,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         <div data-editor-guide-layer="true"></div>
         <div data-editor-selection-box="true">
           <button type="button" data-editor-move-handle="true">Move</button>
+          <button type="button" data-editor-resize-handle="true" data-resize-direction="nw" aria-hidden="true" tabindex="-1"></button>
+          <button type="button" data-editor-resize-handle="true" data-resize-direction="ne" aria-hidden="true" tabindex="-1"></button>
+          <button type="button" data-editor-resize-handle="true" data-resize-direction="sw" aria-hidden="true" tabindex="-1"></button>
+          <button type="button" data-editor-resize-handle="true" data-resize-direction="se" aria-hidden="true" tabindex="-1"></button>
         </div>
       `;
       previewDocument.body.appendChild(root);
@@ -4231,6 +4553,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       previewDocument.addEventListener("click", handlePreviewClick);
       previewDocument.addEventListener("dblclick", handlePreviewDoubleClick);
       previewDocument.addEventListener("pointerdown", handlePreviewPointerDown);
+      previewDocument.addEventListener("focusin", handlePreviewFocusIn);
       previewDocument.addEventListener("input", handlePreviewMutation);
       previewDocument.addEventListener("blur", handlePreviewMutation, true);
       previewDocument.addEventListener("keydown", handlePreviewKeydown);
@@ -4307,6 +4630,13 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return;
       }
 
+      const resizeHandle = target.closest("[data-editor-resize-handle='true']");
+      if (resizeHandle && appState.selectedElement) {
+        const direction = resizeHandle.getAttribute("data-resize-direction") || "se";
+        startElementResize(appState.selectedElement, event, direction);
+        return;
+      }
+
       const handle = target.closest("[data-editor-move-handle='true']");
       if (!handle || !appState.selectedElement) {
         return;
@@ -4357,6 +4687,20 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       deleteSelectedElement();
     }
 
+    function handlePreviewFocusIn(event) {
+      const target = getEventTargetElement(event);
+      if (!target) {
+        return;
+      }
+
+      const codeBlock = resolveCodeBlockFromElement(target);
+      if (!codeBlock) {
+        return;
+      }
+
+      highlightPreviewCodeBlock(codeBlock, { preserveCaret: true });
+    }
+
     function isDeletionKey(event) {
       return event.key === "Delete" || event.key === "Backspace";
     }
@@ -4382,7 +4726,17 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       return false;
     }
 
-    function handlePreviewMutation() {
+    function handlePreviewMutation(event) {
+      const target = getEventTargetElement(event || {});
+      const codeBlock = target ? resolveCodeBlockFromElement(target) : null;
+      if (codeBlock && event?.type === "input") {
+        scheduleCodeBlockHighlight(codeBlock);
+      }
+
+      if (codeBlock && event?.type === "blur") {
+        highlightPreviewCodeBlock(codeBlock, { force: true });
+      }
+
       window.clearTimeout(appState.previewSyncTimer);
       appState.previewSyncTimer = window.setTimeout(syncSourceFromPreview, 90);
       updatePagePicker(previewFrame.contentDocument);
@@ -4598,6 +4952,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       const selectionBox = previewDocument.querySelector("[data-editor-selection-box='true']");
       const moveHandle = previewDocument.querySelector("[data-editor-move-handle='true']");
+      const resizeHandles = Array.from(previewDocument.querySelectorAll("[data-editor-resize-handle='true']"));
 
       if (!selectionBox || !moveHandle) {
         return;
@@ -4609,6 +4964,9 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         selectionBox.style.top = "";
         selectionBox.style.width = "";
         selectionBox.style.height = "";
+        resizeHandles.forEach((handle) => {
+          handle.hidden = true;
+        });
         clearAlignmentGuides(previewDocument);
         return;
       }
@@ -4627,6 +4985,10 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       selectionBox.style.width = `${Math.round(rect.width + padding * 2)}px`;
       selectionBox.style.height = `${Math.round(rect.height + padding * 2)}px`;
       moveHandle.hidden = !canDragElement(appState.selectedElement);
+      const canResize = canResizeElement(appState.selectedElement);
+      resizeHandles.forEach((handle) => {
+        handle.hidden = !canResize;
+      });
     }
 
     function canDragElement(element) {
@@ -4635,6 +4997,15 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       return element !== element.ownerDocument.body;
+    }
+
+    function canResizeElement(element) {
+      if (!element || !element.ownerDocument || element === element.ownerDocument.body) {
+        return false;
+      }
+
+      const builderNode = element.getAttribute("data-builder-node");
+      return builderNode === "text" || builderNode === "code" || builderNode === "image";
     }
 
     function createRectSnapshot(rect) {
@@ -4956,6 +5327,100 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       previewDocument.addEventListener("pointercancel", onUp);
     }
 
+    function startElementResize(element, pointerEvent, direction) {
+      if (!canResizeElement(element)) {
+        return;
+      }
+
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument) {
+        return;
+      }
+
+      pointerEvent.preventDefault();
+      ensureTransformState(element);
+
+      const startX = pointerEvent.clientX;
+      const startY = pointerEvent.clientY;
+      const startWidth = getElementDimensionPx(element, "width");
+      const startHeight = getElementDimensionPx(element, "height");
+      const startTranslateX = getTransformValue(element, "data-editor-translate-x");
+      const startTranslateY = getTransformValue(element, "data-editor-translate-y");
+      const zoomScale = getAppliedPreviewZoomScale() || 1;
+      const builderNode = element.getAttribute("data-builder-node");
+      const minWidth = builderNode === "code" ? 120 : 80;
+      const minHeight = builderNode === "code" ? 96 : 48;
+
+      element.style.width = `${Math.round(startWidth)}px`;
+      element.style.height = `${Math.round(startHeight)}px`;
+      element.style.minHeight = `${Math.round(startHeight)}px`;
+      element.setAttribute("data-editor-resizing", "true");
+      previewDocument.body.style.userSelect = "none";
+
+      const onMove = (moveEvent) => {
+        const deltaX = (moveEvent.clientX - startX) / zoomScale;
+        const deltaY = (moveEvent.clientY - startY) / zoomScale;
+        let nextWidth = startWidth;
+        let nextHeight = startHeight;
+        let nextTranslateX = startTranslateX;
+        let nextTranslateY = startTranslateY;
+
+        if (direction.includes("e")) {
+          nextWidth = startWidth + deltaX;
+        }
+
+        if (direction.includes("s")) {
+          nextHeight = startHeight + deltaY;
+        }
+
+        if (direction.includes("w")) {
+          nextWidth = startWidth - deltaX;
+          nextTranslateX = startTranslateX + deltaX;
+        }
+
+        if (direction.includes("n")) {
+          nextHeight = startHeight - deltaY;
+          nextTranslateY = startTranslateY + deltaY;
+        }
+
+        if (nextWidth < minWidth) {
+          if (direction.includes("w")) {
+            nextTranslateX -= (minWidth - nextWidth);
+          }
+          nextWidth = minWidth;
+        }
+
+        if (nextHeight < minHeight) {
+          if (direction.includes("n")) {
+            nextTranslateY -= (minHeight - nextHeight);
+          }
+          nextHeight = minHeight;
+        }
+
+        element.style.width = `${Math.round(nextWidth)}px`;
+        element.style.height = `${Math.round(nextHeight)}px`;
+        element.style.minHeight = `${Math.round(nextHeight)}px`;
+        element.setAttribute("data-editor-translate-x", String(Math.round(nextTranslateX)));
+        element.setAttribute("data-editor-translate-y", String(Math.round(nextTranslateY)));
+        applyManagedTransform(element);
+        updateToolbarState();
+        scheduleOverlayRefresh();
+      };
+
+      const onUp = () => {
+        element.removeAttribute("data-editor-resizing");
+        previewDocument.body.style.userSelect = "";
+        previewDocument.removeEventListener("pointermove", onMove);
+        previewDocument.removeEventListener("pointerup", onUp);
+        previewDocument.removeEventListener("pointercancel", onUp);
+        syncSourceFromPreview();
+      };
+
+      previewDocument.addEventListener("pointermove", onMove);
+      previewDocument.addEventListener("pointerup", onUp);
+      previewDocument.addEventListener("pointercancel", onUp);
+    }
+
     function getDragBoundary(element) {
       if (element.matches("[data-editor-page='true']")) {
         return element.ownerDocument.body;
@@ -5017,14 +5482,99 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       element.style.transform = parts.join(" ").trim();
     }
 
+    function isCodeBlockContainer(element) {
+      return Boolean(
+        element &&
+        element.tagName === "PRE" &&
+        (
+          element.getAttribute("data-remark-block") === "code" ||
+          element.getAttribute("data-builder-node") === "code"
+        )
+      );
+    }
+
+    function getSelectedCodeBlockTarget() {
+      const selectedElement = appState.selectedElement;
+      if (!selectedElement) {
+        return null;
+      }
+
+      if (isCodeBlockContainer(selectedElement)) {
+        return selectedElement;
+      }
+
+      if (selectedElement.tagName === "CODE" && isCodeBlockContainer(selectedElement.parentElement)) {
+        return selectedElement.parentElement;
+      }
+
+      return null;
+    }
+
     function getSelectedTextTarget() {
       const selectedElement = appState.selectedElement;
-      return selectedElement && selectedElement.matches("[data-editor-text-editable='true']") ? selectedElement : null;
+      if (!selectedElement || !selectedElement.matches("[data-editor-text-editable='true']")) {
+        return null;
+      }
+
+      return isCodeBlockContainer(selectedElement) ? null : selectedElement;
     }
 
     function getSelectedImageTarget() {
       const selectedElement = appState.selectedElement;
       return selectedElement && selectedElement.matches("img[data-editor-image='true']") ? selectedElement : null;
+    }
+
+    function getSelectedResizableTextTarget() {
+      const target = getSelectedTextTarget();
+      return target && target.getAttribute("data-builder-node") === "text" ? target : null;
+    }
+
+    function getSelectedResizableCodeTarget() {
+      const target = getSelectedCodeBlockTarget();
+      return target && target.getAttribute("data-builder-node") === "code" ? target : null;
+    }
+
+    function getElementDimensionPx(element, property) {
+      const direct = Number.parseFloat(element.style[property]);
+      if (Number.isFinite(direct) && direct > 0) {
+        return Math.round(direct);
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(element);
+      const computedValue = Number.parseFloat(computed[property]);
+      if (Number.isFinite(computedValue) && computedValue > 0) {
+        return Math.round(computedValue);
+      }
+
+      const rect = element.getBoundingClientRect();
+      return Math.round(property === "width" ? rect.width : rect.height);
+    }
+
+    function applyElementDimension(element, property, rawValue, minimum) {
+      if (!element) {
+        return;
+      }
+
+      const numeric = Math.max(minimum, Number(rawValue) || minimum);
+      element.style[property] = `${Math.round(numeric)}px`;
+
+      if (property === "height") {
+        element.style.minHeight = `${Math.round(numeric)}px`;
+      }
+
+      updateToolbarState();
+      syncSourceFromPreview();
+      scheduleOverlayRefresh();
+    }
+
+    function applyTextBlockDimension(property, rawValue) {
+      const target = getSelectedResizableTextTarget();
+      applyElementDimension(target, property, rawValue, property === "width" ? 80 : 48);
+    }
+
+    function applyCodeBlockDimension(property, rawValue) {
+      const target = getSelectedResizableCodeTarget();
+      applyElementDimension(target, property, rawValue, property === "width" ? 120 : 96);
     }
 
     function canDeleteSelectedElement() {
@@ -5061,9 +5611,13 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     function updateToolbarState() {
       const textTarget = getSelectedTextTarget();
       const imageTarget = getSelectedImageTarget();
+      const codeTarget = getSelectedCodeBlockTarget();
+      const resizableTextTarget = getSelectedResizableTextTarget();
+      const resizableCodeTarget = getSelectedResizableCodeTarget();
 
       textControlsGroup.hidden = !textTarget;
       imageControlsGroup.hidden = !imageTarget;
+      codeControlsGroup.hidden = !codeTarget;
 
       textStyleControls.forEach((control) => {
         control.disabled = !textTarget;
@@ -5071,6 +5625,18 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       imageStyleControls.forEach((control) => {
         control.disabled = !imageTarget;
+      });
+
+      codeStyleControls.forEach((control) => {
+        control.disabled = !codeTarget;
+      });
+
+      textSizeControls.forEach((control) => {
+        control.disabled = !resizableTextTarget;
+      });
+
+      codeSizeControls.forEach((control) => {
+        control.disabled = !resizableCodeTarget;
       });
 
       if (textTarget) {
@@ -5097,6 +5663,36 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         imageRotateControl.value = Math.round(getTransformValue(imageTarget, "data-editor-rotate"));
         imageObjectFitControl.value = computed.objectFit || "fill";
         imageFilterControl.value = matchImageFilterPreset(imageTarget.style.filter || computed.filter);
+      }
+
+      if (resizableTextTarget) {
+        textWidthControl.value = String(getElementDimensionPx(resizableTextTarget, "width"));
+        textHeightControl.value = String(getElementDimensionPx(resizableTextTarget, "height"));
+      } else {
+        textWidthControl.value = "";
+        textHeightControl.value = "";
+      }
+
+      if (codeTarget) {
+        const language = normalizeCodeLanguage(
+          extractFenceLanguage(codeTarget.getAttribute("data-remark-fence-info")) ||
+          codeTarget.getAttribute("data-remark-language") ||
+          ""
+        );
+        const controlLanguage = language === "markup" ? "html" : language;
+        codeLanguageControl.value = ["java", "python", "javascript", "c++", "html", "css"].includes(controlLanguage)
+          ? controlLanguage
+          : "";
+      } else {
+        codeLanguageControl.value = "";
+      }
+
+      if (resizableCodeTarget) {
+        codeWidthControl.value = String(getElementDimensionPx(resizableCodeTarget, "width"));
+        codeHeightControl.value = String(getElementDimensionPx(resizableCodeTarget, "height"));
+      } else {
+        codeWidthControl.value = "";
+        codeHeightControl.value = "";
       }
 
       deleteElementButton.disabled = !canDeleteSelectedElement();
@@ -5295,6 +5891,34 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       updateToolbarState();
       syncSourceFromPreview();
       scheduleOverlayRefresh();
+    }
+
+    function applyCodeLanguageToSelection(languageValue) {
+      const codeBlock = getSelectedCodeBlockTarget();
+      if (!codeBlock) {
+        return;
+      }
+
+      const selectedLanguage = String(languageValue || "").trim();
+      const normalizedLanguage = normalizeCodeLanguage(selectedLanguage);
+      if (!selectedLanguage) {
+        codeBlock.removeAttribute("data-remark-language");
+        codeBlock.removeAttribute("data-remark-fence-info");
+      } else {
+        codeBlock.setAttribute("data-remark-fence-info", selectedLanguage);
+        if (normalizedLanguage) {
+          codeBlock.setAttribute("data-remark-language", normalizedLanguage);
+        } else {
+          codeBlock.removeAttribute("data-remark-language");
+        }
+      }
+
+      highlightPreviewCodeBlock(codeBlock, { force: true, preserveCaret: true });
+
+      updateToolbarState();
+      syncSourceFromPreview();
+      scheduleOverlayRefresh();
+      editorStatus.textContent = "Updated code language";
     }
 
     function replaceSelectedImage() {
@@ -5537,7 +6161,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       node.style.left = `${getBuilderOffset(page, 70)}px`;
       node.style.top = `${getBuilderOffset(page, 88)}px`;
       node.style.width = "320px";
+      node.style.height = "72px";
       node.style.minHeight = "72px";
+      node.style.margin = "0";
+      node.style.alignSelf = "flex-start";
+      node.style.justifySelf = "start";
       node.style.padding = "16px 18px";
       node.style.borderRadius = "20px";
       node.style.background = "rgba(255, 255, 255, 0.94)";
@@ -5559,6 +6187,51 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       setPreviewHint("Type directly in the new text block, then drag it with the Move handle when you need to reposition it.");
     }
 
+    function addCodeBlockToCurrentPage() {
+      const previewDocument = previewFrame.contentDocument;
+      const page = ensureCurrentPage(previewDocument, true);
+
+      if (!previewDocument || !page) {
+        return;
+      }
+
+      const node = previewDocument.createElement("pre");
+      node.setAttribute("data-builder-node", "code");
+      node.setAttribute("data-remark-block", "code");
+      node.style.position = "absolute";
+      node.style.left = `${getBuilderOffset(page, 84)}px`;
+      node.style.top = `${getBuilderOffset(page, 122)}px`;
+      node.style.width = "480px";
+      node.style.height = "180px";
+      node.style.minHeight = "180px";
+      node.style.maxWidth = "min(82%, 760px)";
+      node.style.margin = "0";
+      node.style.alignSelf = "flex-start";
+      node.style.justifySelf = "start";
+      node.style.padding = "16px 18px";
+      node.style.borderRadius = "18px";
+      node.style.border = "1px solid rgba(126, 192, 255, 0.24)";
+      node.style.background = "linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(23, 37, 67, 0.98))";
+      node.style.boxShadow = "0 16px 34px rgba(15, 23, 42, 0.22)";
+      node.style.color = "#e8eefc";
+      node.style.fontFamily = '"SFMono-Regular", "Cascadia Code", "JetBrains Mono", "Fira Code", "Courier New", monospace';
+      node.style.fontSize = "0.95rem";
+      node.style.lineHeight = "1.65";
+      node.style.textAlign = "left";
+      node.style.whiteSpace = "pre";
+      node.style.overflow = "auto";
+      node.style.tabSize = "2";
+      node.textContent = "// Paste or type code here";
+
+      page.appendChild(node);
+      markInteractiveNodes(previewDocument);
+      selectElement(node);
+      syncSourceFromPreview();
+      focusEditableElement(node);
+      editorStatus.textContent = "Added code block";
+      setPreviewHint("Type directly in the code block, choose a language from the toolbar, then drag it with the Move handle if needed.");
+    }
+
     function addImageNodeToCurrentPage(dataUrl, fileName) {
       const previewDocument = previewFrame.contentDocument;
       const page = ensureCurrentPage(previewDocument, true);
@@ -5576,6 +6249,9 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       image.style.top = `${getBuilderOffset(page, 126)}px`;
       image.style.width = "320px";
       image.style.height = "220px";
+      image.style.margin = "0";
+      image.style.alignSelf = "flex-start";
+      image.style.justifySelf = "start";
       image.style.display = "block";
       image.style.objectFit = "cover";
       image.style.borderRadius = "22px";
@@ -6321,7 +6997,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
           const fenceInfoAttribute = fenceInfo ? ` data-remark-fence-info="${escapeHtmlAttribute(fenceInfo)}"` : "";
           const languageAttribute = language ? ` data-remark-language="${escapeHtmlAttribute(language)}"` : "";
-          blocks.push(`<pre data-remark-block="code"${languageAttribute}${fenceInfoAttribute}><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+          blocks.push(`<pre data-remark-block="code"${languageAttribute}${fenceInfoAttribute}>${escapeHtml(codeLines.join("\n"))}</pre>`);
           continue;
         }
 
@@ -6514,6 +7190,16 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return "";
       }
 
+      const isBuilderCodeBlock = tagName === "PRE" && cleaned.getAttribute("data-builder-node") === "code";
+      if (isBuilderCodeBlock) {
+        cleaned.removeAttribute("data-builder-node");
+        cleaned.removeAttribute("style");
+        const serializedBuilderCode = serializeRemarkCodeBlock(cleaned);
+        if (serializedBuilderCode) {
+          return serializedBuilderCode;
+        }
+      }
+
       if (cleaned.style.position === "absolute" || cleaned.hasAttribute("data-builder-node")) {
         cleaned.removeAttribute("data-builder-node");
         return cleaned.outerHTML;
@@ -6686,8 +7372,18 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return false;
       }
 
+      if (!element.children.length) {
+        return true;
+      }
+
       const code = element.querySelector("code");
-      return Boolean(code && element.children.length === 1 && !hasNonTrivialAttributes(code));
+      if (code && element.children.length === 1 && !hasNonTrivialAttributes(code)) {
+        return true;
+      }
+
+      return Array.from(element.querySelectorAll("*")).every((node) => {
+        return ["BR", "DIV", "P"].includes(node.tagName) && !hasNonTrivialAttributes(node);
+      });
     }
 
     function serializeRemarkCodeBlock(element) {
@@ -6696,13 +7392,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       const code = element.querySelector("code");
-      if (!code) {
-        return "";
-      }
+      const codeContent = (code ? code.textContent : (element.innerText || element.textContent)) || "";
 
       const fenceInfo = (element.getAttribute("data-remark-fence-info") || element.getAttribute("data-remark-language") || "").trim();
       const fenceSuffix = fenceInfo ? fenceInfo : "";
-      return `\`\`\`${fenceSuffix}\n${code.textContent.replace(/\n+$/, "")}\n\`\`\``;
+      return `\`\`\`${fenceSuffix}\n${codeContent.replace(/\n+$/, "")}\n\`\`\``;
     }
 
     function canSerializeSimpleStandaloneImage(element) {
