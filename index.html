@@ -1625,6 +1625,24 @@ Edit the slide source on the left, or add text and images directly in the previe
       "CODE"
     ]);
 
+    const RESIZABLE_TEXT_TAGS = new Set([
+      "P",
+      "SPAN",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "DIV",
+      "LI",
+      "TD",
+      "TH",
+      "BLOCKQUOTE",
+      "CAPTION",
+      "FIGCAPTION"
+    ]);
+
     const REMARK_INLINE_HTML_TAGS = new Set([
       "A",
       "B",
@@ -3616,8 +3634,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       }
 
       const candidates = new Set();
-      previewDocument.querySelectorAll("pre[data-remark-block='code'], pre[data-builder-node='code'], pre code").forEach((node) => {
-        const preElement = node.tagName === "PRE" ? node : node.closest("pre");
+      previewDocument.querySelectorAll("pre").forEach((preElement) => {
         if (isHighlightableCodePre(preElement)) {
           candidates.add(preElement);
         }
@@ -3629,13 +3646,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function isHighlightableCodePre(preElement) {
-      if (!preElement || preElement.tagName !== "PRE") {
-        return false;
-      }
+      return isCodePreElement(preElement);
+    }
 
-      return preElement.getAttribute("data-remark-block") === "code"
-        || preElement.getAttribute("data-builder-node") === "code"
-        || preElement.firstElementChild?.tagName === "CODE";
+    function isCodePreElement(preElement) {
+      return Boolean(preElement && preElement.tagName === "PRE");
     }
 
     function resolveCodeBlockFromElement(element) {
@@ -4369,6 +4384,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         element.removeAttribute("data-editor-selectable");
         element.removeAttribute("data-editor-text-editable");
         element.removeAttribute("data-editor-image");
+        element.removeAttribute("data-editor-managed-block");
 
         if (element !== previewDocument.body) {
           element.removeAttribute("contenteditable");
@@ -4378,6 +4394,16 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         if (element.tagName === "IMG") {
           element.setAttribute("data-editor-selectable", "true");
           element.setAttribute("data-editor-image", "true");
+          element.setAttribute("data-editor-managed-block", "image");
+          return;
+        }
+
+        if (element !== previewDocument.body && isCodePreElement(element)) {
+          element.setAttribute("data-editor-selectable", "true");
+          element.setAttribute("data-editor-text-editable", "true");
+          element.setAttribute("contenteditable", "true");
+          element.setAttribute("spellcheck", "false");
+          element.setAttribute("data-editor-managed-block", "code");
           return;
         }
 
@@ -4386,6 +4412,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
           element.setAttribute("data-editor-text-editable", "true");
           element.setAttribute("contenteditable", "true");
           element.setAttribute("spellcheck", "false");
+          element.setAttribute("data-editor-managed-block", "text");
           return;
         }
 
@@ -4483,6 +4510,53 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function isPreviewCodeTokenElement(element) {
       return Boolean(element?.hasAttribute("data-editor-code-token")) || Boolean(element?.closest?.("[data-editor-code-token]"));
+    }
+
+    function isResizableTextElement(element) {
+      return Boolean(
+        element &&
+        element.matches("[data-editor-text-editable='true']") &&
+        RESIZABLE_TEXT_TAGS.has(element.tagName) &&
+        !isCodePreElement(element)
+      );
+    }
+
+    function getManagedBlockKind(element) {
+      if (!element || !element.ownerDocument || element === element.ownerDocument.body) {
+        return "";
+      }
+
+      const explicitKind = element.getAttribute("data-editor-managed-block");
+      if (explicitKind === "text" || explicitKind === "code" || explicitKind === "image") {
+        return explicitKind;
+      }
+
+      if (element.matches("img[data-editor-image='true']")) {
+        return "image";
+      }
+
+      if (isCodePreElement(element)) {
+        return "code";
+      }
+
+      if (isResizableTextElement(element)) {
+        return "text";
+      }
+
+      return "";
+    }
+
+    function getDimensionMinimumForElement(element, property) {
+      const kind = getManagedBlockKind(element);
+      if (kind === "image") {
+        return 1;
+      }
+
+      if (kind === "code") {
+        return property === "width" ? 120 : 96;
+      }
+
+      return property === "width" ? 80 : 48;
     }
 
     function ensureEditorOverlay(previewDocument) {
@@ -5004,8 +5078,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return false;
       }
 
-      const builderNode = element.getAttribute("data-builder-node");
-      return builderNode === "text" || builderNode === "code" || builderNode === "image";
+      return Boolean(getManagedBlockKind(element));
     }
 
     function createRectSnapshot(rect) {
@@ -5347,9 +5420,8 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const startTranslateX = getTransformValue(element, "data-editor-translate-x");
       const startTranslateY = getTransformValue(element, "data-editor-translate-y");
       const zoomScale = getAppliedPreviewZoomScale() || 1;
-      const builderNode = element.getAttribute("data-builder-node");
-      const minWidth = builderNode === "code" ? 120 : 80;
-      const minHeight = builderNode === "code" ? 96 : 48;
+      const minWidth = getDimensionMinimumForElement(element, "width");
+      const minHeight = getDimensionMinimumForElement(element, "height");
 
       element.style.width = `${Math.round(startWidth)}px`;
       element.style.height = `${Math.round(startHeight)}px`;
@@ -5483,14 +5555,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
     }
 
     function isCodeBlockContainer(element) {
-      return Boolean(
-        element &&
-        element.tagName === "PRE" &&
-        (
-          element.getAttribute("data-remark-block") === "code" ||
-          element.getAttribute("data-builder-node") === "code"
-        )
-      );
+      return Boolean(element && isCodePreElement(element));
     }
 
     function getSelectedCodeBlockTarget() {
@@ -5526,12 +5591,12 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function getSelectedResizableTextTarget() {
       const target = getSelectedTextTarget();
-      return target && target.getAttribute("data-builder-node") === "text" ? target : null;
+      return target && getManagedBlockKind(target) === "text" ? target : null;
     }
 
     function getSelectedResizableCodeTarget() {
       const target = getSelectedCodeBlockTarget();
-      return target && target.getAttribute("data-builder-node") === "code" ? target : null;
+      return target && getManagedBlockKind(target) === "code" ? target : null;
     }
 
     function getElementDimensionPx(element, property) {
@@ -5555,6 +5620,14 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return;
       }
 
+      const kind = getManagedBlockKind(element);
+      if (kind === "text") {
+        const computed = previewFrame.contentWindow.getComputedStyle(element);
+        if (computed.display === "inline") {
+          element.style.display = "inline-block";
+        }
+      }
+
       const numeric = Math.max(minimum, Number(rawValue) || minimum);
       element.style[property] = `${Math.round(numeric)}px`;
 
@@ -5569,12 +5642,12 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function applyTextBlockDimension(property, rawValue) {
       const target = getSelectedResizableTextTarget();
-      applyElementDimension(target, property, rawValue, property === "width" ? 80 : 48);
+      applyElementDimension(target, property, rawValue, getDimensionMinimumForElement(target, property));
     }
 
     function applyCodeBlockDimension(property, rawValue) {
       const target = getSelectedResizableCodeTarget();
-      applyElementDimension(target, property, rawValue, property === "width" ? 120 : 96);
+      applyElementDimension(target, property, rawValue, getDimensionMinimumForElement(target, property));
     }
 
     function canDeleteSelectedElement() {
@@ -6204,7 +6277,6 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       node.style.width = "480px";
       node.style.height = "180px";
       node.style.minHeight = "180px";
-      node.style.maxWidth = "min(82%, 760px)";
       node.style.margin = "0";
       node.style.alignSelf = "flex-start";
       node.style.justifySelf = "start";
@@ -7190,18 +7262,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         return "";
       }
 
-      const isBuilderCodeBlock = tagName === "PRE" && cleaned.getAttribute("data-builder-node") === "code";
-      if (isBuilderCodeBlock) {
-        cleaned.removeAttribute("data-builder-node");
-        cleaned.removeAttribute("style");
-        const serializedBuilderCode = serializeRemarkCodeBlock(cleaned);
-        if (serializedBuilderCode) {
-          return serializedBuilderCode;
-        }
-      }
-
-      if (cleaned.style.position === "absolute" || cleaned.hasAttribute("data-builder-node")) {
-        cleaned.removeAttribute("data-builder-node");
+      if (cleaned.style.position === "absolute") {
         return cleaned.outerHTML;
       }
 
