@@ -2012,9 +2012,13 @@ Edit the slide source on the left, or add text and images directly in the previe
           all: initial;
           box-sizing: border-box;
           display: block;
-          position: absolute;
+          position: fixed;
+          left: 0;
+          top: 0;
+          transform: translate(-50%, -50%);
           width: var(--editor-resize-hit-size, 16px);
           height: var(--editor-resize-hit-size, 16px);
+          margin: 0;
           border-radius: 999px;
           border: 0;
           background: transparent;
@@ -2050,26 +2054,18 @@ Edit the slide source on the left, or add text and images directly in the previe
         }
 
         :where([data-editor-resize-handle="true"][data-resize-direction="nw"]) {
-          left: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
-          top: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
           cursor: nwse-resize;
         }
 
         :where([data-editor-resize-handle="true"][data-resize-direction="ne"]) {
-          right: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
-          top: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
           cursor: nesw-resize;
         }
 
         :where([data-editor-resize-handle="true"][data-resize-direction="sw"]) {
-          left: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
-          bottom: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
           cursor: nesw-resize;
         }
 
         :where([data-editor-resize-handle="true"][data-resize-direction="se"]) {
-          right: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
-          bottom: calc(var(--editor-resize-hit-size, 16px) * -0.5 - 1px);
           cursor: nwse-resize;
         }
 
@@ -4570,11 +4566,11 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         <div data-editor-guide-layer="true"></div>
         <div data-editor-selection-box="true">
           <button type="button" data-editor-move-handle="true">Move</button>
-          <button type="button" data-editor-resize-handle="true" data-resize-direction="nw" aria-hidden="true" tabindex="-1"></button>
-          <button type="button" data-editor-resize-handle="true" data-resize-direction="ne" aria-hidden="true" tabindex="-1"></button>
-          <button type="button" data-editor-resize-handle="true" data-resize-direction="sw" aria-hidden="true" tabindex="-1"></button>
-          <button type="button" data-editor-resize-handle="true" data-resize-direction="se" aria-hidden="true" tabindex="-1"></button>
         </div>
+        <button type="button" data-editor-resize-handle="true" data-resize-direction="nw" aria-hidden="true" tabindex="-1"></button>
+        <button type="button" data-editor-resize-handle="true" data-resize-direction="ne" aria-hidden="true" tabindex="-1"></button>
+        <button type="button" data-editor-resize-handle="true" data-resize-direction="sw" aria-hidden="true" tabindex="-1"></button>
+        <button type="button" data-editor-resize-handle="true" data-resize-direction="se" aria-hidden="true" tabindex="-1"></button>
       `;
       previewDocument.body.appendChild(root);
     }
@@ -5018,6 +5014,71 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       });
     }
 
+    function formatOverlayPixel(value) {
+      if (!Number.isFinite(value)) {
+        return "0px";
+      }
+
+      return `${Math.round(value * 1000) / 1000}px`;
+    }
+
+    function getSelectionOverlayMetrics(element) {
+      if (!element) {
+        return null;
+      }
+
+      const rect = element.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        return null;
+      }
+
+      const left = rect.left;
+      const top = rect.top;
+      const right = rect.right;
+      const bottom = rect.bottom;
+      const width = right - left;
+      const height = bottom - top;
+
+      return {
+        left,
+        top,
+        right,
+        bottom,
+        width,
+        height,
+        corners: {
+          nw: { x: left, y: top },
+          ne: { x: right, y: top },
+          sw: { x: left, y: bottom },
+          se: { x: right, y: bottom }
+        }
+      };
+    }
+
+    function clearResizeHandlePositions(resizeHandles) {
+      resizeHandles.forEach((handle) => {
+        handle.hidden = true;
+        handle.style.left = "";
+        handle.style.top = "";
+      });
+    }
+
+    function positionResizeHandles(resizeHandles, overlayMetrics) {
+      resizeHandles.forEach((handle) => {
+        const direction = handle.getAttribute("data-resize-direction");
+        const corner = overlayMetrics?.corners?.[direction];
+
+        if (!corner) {
+          handle.style.left = "";
+          handle.style.top = "";
+          return;
+        }
+
+        handle.style.left = formatOverlayPixel(corner.x);
+        handle.style.top = formatOverlayPixel(corner.y);
+      });
+    }
+
     function refreshSelectionOverlay() {
       const previewDocument = previewFrame.contentDocument;
       if (!previewDocument) {
@@ -5038,31 +5099,34 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
         selectionBox.style.top = "";
         selectionBox.style.width = "";
         selectionBox.style.height = "";
-        resizeHandles.forEach((handle) => {
-          handle.hidden = true;
-        });
+        clearResizeHandlePositions(resizeHandles);
         clearAlignmentGuides(previewDocument);
         return;
       }
 
-      const rect = appState.selectedElement.getBoundingClientRect();
-      if (!rect.width || !rect.height) {
+      const overlayMetrics = getSelectionOverlayMetrics(appState.selectedElement);
+      if (!overlayMetrics) {
         selectionBox.removeAttribute("data-visible");
+        clearResizeHandlePositions(resizeHandles);
         clearAlignmentGuides(previewDocument);
         return;
       }
 
-      const padding = 4;
       selectionBox.setAttribute("data-visible", "true");
-      selectionBox.style.left = `${Math.round(rect.left - padding)}px`;
-      selectionBox.style.top = `${Math.round(rect.top - padding)}px`;
-      selectionBox.style.width = `${Math.round(rect.width + padding * 2)}px`;
-      selectionBox.style.height = `${Math.round(rect.height + padding * 2)}px`;
+      selectionBox.style.left = formatOverlayPixel(overlayMetrics.left);
+      selectionBox.style.top = formatOverlayPixel(overlayMetrics.top);
+      selectionBox.style.width = formatOverlayPixel(overlayMetrics.width);
+      selectionBox.style.height = formatOverlayPixel(overlayMetrics.height);
       moveHandle.hidden = !canDragElement(appState.selectedElement);
       const canResize = canResizeElement(appState.selectedElement);
       resizeHandles.forEach((handle) => {
         handle.hidden = !canResize;
       });
+      if (canResize) {
+        positionResizeHandles(resizeHandles, overlayMetrics);
+      } else {
+        clearResizeHandlePositions(resizeHandles);
+      }
     }
 
     function canDragElement(element) {
