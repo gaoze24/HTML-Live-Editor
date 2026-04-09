@@ -66,6 +66,7 @@
       --radius-md: 18px;
       --radius-sm: 12px;
       --control-height: 2.1rem;
+      --toolbar-row-height: calc(var(--control-height) + 0.5rem);
     }
 
     * {
@@ -206,7 +207,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-rows: repeat(2, minmax(0, auto));
+      grid-template-rows: repeat(2, var(--toolbar-row-height));
       gap: 0.36rem;
       width: 100%;
       min-width: 0;
@@ -217,28 +218,37 @@
       align-items: stretch;
       gap: 0.38rem;
       min-width: 0;
-      min-height: calc(var(--control-height) + 0.18rem);
+      min-height: var(--toolbar-row-height);
+      height: var(--toolbar-row-height);
       overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(95, 78, 61, 0.24) transparent;
+      overflow-y: clip;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      scrollbar-gutter: stable both-edges;
     }
 
     .toolbar__row::-webkit-scrollbar {
-      height: 0.45rem;
-    }
-
-    .toolbar__row::-webkit-scrollbar-thumb {
-      background: rgba(95, 78, 61, 0.24);
-      border-radius: 999px;
-    }
-
-    .toolbar__row::-webkit-scrollbar-track {
-      background: transparent;
+      display: none;
+      width: 0;
+      height: 0;
     }
 
     .toolbar__row > * {
       flex: 0 0 auto;
+    }
+
+    .toolbar__row--context {
+      min-height: var(--toolbar-row-height);
+      height: var(--toolbar-row-height);
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .toolbar__row--context::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
     }
 
     .toolbar__group {
@@ -532,6 +542,12 @@
     .source-panel .panel__header {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08));
       border-bottom-color: rgba(95, 78, 61, 0.14);
+    }
+
+    .presenter-notes-panel .panel__header {
+      justify-content: flex-start;
+      gap: 0.5rem;
+      padding-bottom: 0.76rem;
     }
 
     .panel__header-copy {
@@ -1308,7 +1324,7 @@
           </div>
 
           <div class="toolbar__group" id="presenterViewGroup" hidden>
-            <button class="toolbar-toggle" id="presenterViewButton" type="button" aria-pressed="false">Presenter View</button>
+            <button class="toolbar-toggle" id="presenterViewButton" type="button" aria-pressed="false">Presenter Notes</button>
           </div>
         </div>
       </div>
@@ -1408,7 +1424,6 @@
                   <span class="panel__kicker">Speaker</span>
                   <h2>Presenter Notes</h2>
                 </div>
-                <span class="helper-pill" id="presenterNotesStatus">Notes hidden</span>
               </div>
               <div class="source-panel__body">
                 <label class="sr-only" for="presenterNotesInput">Presenter notes</label>
@@ -2432,6 +2447,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     const pageSelect = document.getElementById("pageSelect");
     const pageSelectLabel = document.getElementById("pageSelectLabel");
     const modeBadge = document.getElementById("modeBadge");
+    const contextToolbarRow = document.querySelector(".toolbar__row--context");
     const deleteElementButton = document.getElementById("deleteElementButton");
     const deletePageButton = document.getElementById("deletePageButton");
     const presenterViewGroup = document.getElementById("presenterViewGroup");
@@ -2444,7 +2460,6 @@ Edit the slide source on the left, or add text and images directly in the previe
     const notesResizeHandle = document.getElementById("notesResizeHandle");
     const presenterNotesPanel = document.getElementById("presenterNotesPanel");
     const presenterNotesInput = document.getElementById("presenterNotesInput");
-    const presenterNotesStatus = document.getElementById("presenterNotesStatus");
     const remarkMetaGroup = document.getElementById("remarkMetaGroup");
     const slideClassControl = document.getElementById("slideClassControl");
     const textControlsGroup = document.getElementById("textControlsGroup");
@@ -2522,6 +2537,7 @@ Edit the slide source on the left, or add text and images directly in the previe
     function bindAppEvents() {
       window.addEventListener("resize", handleWindowResize);
       document.addEventListener("fullscreenchange", handleFullscreenChange);
+      contextToolbarRow?.addEventListener("wheel", handleContextToolbarWheel, { passive: false });
 
       sourceInput.addEventListener("input", () => {
         updateSourceStats();
@@ -2718,6 +2734,31 @@ Edit the slide source on the left, or add text and images directly in the previe
       codeHeightControl.addEventListener("input", () => {
         applyCodeBlockDimension("height", codeHeightControl.value);
       });
+    }
+
+    function handleContextToolbarWheel(event) {
+      if (!contextToolbarRow || event.ctrlKey) {
+        return;
+      }
+
+      const canScrollHorizontally = contextToolbarRow.scrollWidth - contextToolbarRow.clientWidth > 1;
+      if (!canScrollHorizontally) {
+        return;
+      }
+
+      const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+      if (!delta) {
+        return;
+      }
+
+      const maxScrollLeft = Math.max(0, contextToolbarRow.scrollWidth - contextToolbarRow.clientWidth);
+      const nextScrollLeft = clamp(contextToolbarRow.scrollLeft + delta, 0, maxScrollLeft);
+      if (Math.abs(nextScrollLeft - contextToolbarRow.scrollLeft) < 0.5) {
+        return;
+      }
+
+      contextToolbarRow.scrollLeft = nextScrollLeft;
+      event.preventDefault();
     }
 
     function bindResizeHandles() {
@@ -5865,7 +5906,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const isRelevant = isRemarkMode();
       const isVisible = isRelevant && appState.presenterView;
       presenterViewButton.setAttribute("aria-pressed", String(isVisible));
-      presenterViewButton.textContent = "Presenter View";
+      presenterViewButton.textContent = "Presenter Notes";
       presenterViewButton.disabled = !isRelevant;
       presenterNotesPanel.hidden = !isVisible;
       presenterNotesPanel.setAttribute("aria-hidden", String(!isVisible));
@@ -5874,7 +5915,6 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       if (!isVisible) {
         setPresenterNotesValue("");
-        presenterNotesStatus.textContent = "Notes hidden";
         presenterNotesInput.disabled = true;
         if (appState.previewZoomMode !== "manual") {
           applyPreviewZoom();
@@ -5888,7 +5928,6 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const notes = slide?.notesSource || "";
       setPresenterNotesValue(notes);
       presenterNotesInput.disabled = !slide;
-      presenterNotesStatus.textContent = notes ? "Notes visible" : "No notes yet";
       if (appState.previewZoomMode !== "manual") {
         applyPreviewZoom();
       } else {
@@ -5914,7 +5953,6 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
       slide.notesSource = presenterNotesInput.value;
       setSourceValue(buildRemarkDeckSource(appState.documentModel));
-      presenterNotesStatus.textContent = slide.notesSource.trim() ? "Notes visible" : "No notes yet";
       editorStatus.textContent = "Presenter notes updated";
       setPreviewHint("Presenter notes stay hidden from the audience preview and are preserved in export.");
     }
