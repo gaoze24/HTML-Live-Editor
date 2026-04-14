@@ -6531,8 +6531,88 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       updateRemarkMetadataControls();
     }
 
+    function syncClonedGeometryWithPreview(sourceNode, cloneNode) {
+      if (!sourceNode || !cloneNode || sourceNode.nodeType !== cloneNode.nodeType) {
+        return;
+      }
+
+      if (sourceNode.nodeType === Node.ELEMENT_NODE) {
+        materializeCloneGeometryFromPreview(sourceNode, cloneNode);
+      }
+
+      const sourceChildren = sourceNode.childNodes;
+      const cloneChildren = cloneNode.childNodes;
+      const childCount = Math.min(sourceChildren.length, cloneChildren.length);
+
+      for (let index = 0; index < childCount; index += 1) {
+        syncClonedGeometryWithPreview(sourceChildren[index], cloneChildren[index]);
+      }
+    }
+
+    function materializeCloneGeometryFromPreview(sourceElement, cloneElement) {
+      if (!previewFrame.contentWindow) {
+        return;
+      }
+
+      const translateX = getTransformValue(sourceElement, "data-editor-translate-x");
+      const translateY = getTransformValue(sourceElement, "data-editor-translate-y");
+      if (!translateX && !translateY) {
+        return;
+      }
+
+      const computed = previewFrame.contentWindow.getComputedStyle(sourceElement);
+      if (!shouldBakeCloneGeometry(sourceElement, computed)) {
+        return;
+      }
+
+      const computedLeft = Number.parseFloat(computed.left);
+      const computedTop = Number.parseFloat(computed.top);
+      if (!Number.isFinite(computedLeft) || !Number.isFinite(computedTop)) {
+        return;
+      }
+
+      const computedWidth = Number.parseFloat(computed.width) || 0;
+      const computedHeight = Number.parseFloat(computed.height) || 0;
+      const computedMinHeight = Number.parseFloat(computed.minHeight) || 0;
+
+      cloneElement.style.position = "absolute";
+      cloneElement.style.inset = "auto";
+      cloneElement.style.right = "auto";
+      cloneElement.style.bottom = "auto";
+      cloneElement.style.left = formatOverlayPixel(computedLeft + translateX);
+      cloneElement.style.top = formatOverlayPixel(computedTop + translateY);
+
+      if (computedWidth > 0) {
+        cloneElement.style.width = formatOverlayPixel(computedWidth);
+      }
+
+      if (computedHeight > 0) {
+        cloneElement.style.height = formatOverlayPixel(computedHeight);
+      }
+
+      if (computedMinHeight > 0) {
+        cloneElement.style.minHeight = formatOverlayPixel(computedMinHeight);
+      }
+
+      cloneElement.setAttribute("data-editor-translate-x", "0");
+      cloneElement.setAttribute("data-editor-translate-y", "0");
+    }
+
+    function shouldBakeCloneGeometry(sourceElement, computedStyle) {
+      if (!sourceElement || !computedStyle) {
+        return false;
+      }
+
+      if (sourceElement.closest("[data-editor-overlay-root='true']")) {
+        return false;
+      }
+
+      return computedStyle.position === "absolute";
+    }
+
     function serializePreviewDocument(previewDocument, forExport) {
       const clone = previewDocument.documentElement.cloneNode(true);
+      syncClonedGeometryWithPreview(previewDocument.documentElement, clone);
       clone.querySelector("#editor-preview-style")?.remove();
       clone.querySelector(`#${PREVIEW_ZOOM_STYLE_ID}`)?.remove();
       clone.querySelectorAll("[data-editor-overlay-root]").forEach((overlay) => overlay.remove());
@@ -6606,14 +6686,178 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
       const slideSource = buildRemarkDeckSource(model);
       const textareaMarkup = buildRemarkTextareaMarkup(model, slideSource);
       const htmlAttributes = model.htmlAttributes || ` lang="en"`;
-      const headHtml = model.headHtml || DEFAULT_REMARK_HEAD.trim();
-      const bodyTemplate = ensureRemarkPlaceholder(model.bodyTemplate || DEFAULT_REMARK_BODY);
+      const headHtml = buildRemarkExportHeadHtml(model);
+      const bodyTemplate = buildRemarkExportBodyTemplate(model);
       const bodyHtml = bodyTemplate.replace(REMARK_PLACEHOLDER, textareaMarkup);
       const finalHtml = `${model.doctype || "<!DOCTYPE html>"}\n<html${htmlAttributes}>\n<head>\n${headHtml}\n</head>\n<body>\n${bodyHtml}\n</body>\n</html>`;
 
       triggerDownload(finalHtml, appState.exportFileName || "remark_deck.html");
       editorStatus.textContent = `Exported ${appState.exportFileName || "remark_deck.html"}`;
       setPreviewHint("The exported file is a remark-compatible slideshow wrapper with your updated slide source stored inside <textarea id=\"source\">.");
+    }
+
+    function buildRemarkExportHeadHtml(model) {
+      const headHtml = (model?.headHtml || DEFAULT_REMARK_HEAD.trim()).trim();
+      if (/data-editor-remark-export-style/i.test(headHtml)) {
+        return headHtml;
+      }
+
+      return `${headHtml}\n<style data-editor-remark-export-style="true">\n${buildRemarkExportLayoutCss(model)}\n</style>`;
+    }
+
+    function buildRemarkExportBodyTemplate(model) {
+      const bodyTemplate = ensureRemarkPlaceholder(model?.bodyTemplate || DEFAULT_REMARK_BODY);
+      const { widthPx, heightPx } = getRemarkExportCanvasSize(model);
+      const ratio = buildAspectRatioString(widthPx, heightPx);
+      if (/remark\.create\s*\(\s*\)/.test(bodyTemplate)) {
+        return bodyTemplate.replace(/remark\.create\s*\(\s*\)/, `remark.create({ ratio: "${ratio}" })`);
+      }
+
+      if (/remark\.create\s*\(\s*\{\s*\}\s*\)/.test(bodyTemplate)) {
+        return bodyTemplate.replace(/remark\.create\s*\(\s*\{\s*\}\s*\)/, `remark.create({ ratio: "${ratio}" })`);
+      }
+
+      return bodyTemplate;
+    }
+
+    function buildRemarkExportLayoutCss(model) {
+      const defaults = model?.pageDefaults || createDefaultPageDefaults("remark-slideshow");
+      const { widthPx, heightPx } = getRemarkExportCanvasSize(model);
+
+      return `
+        html, body {
+          margin: 0;
+          min-height: 100%;
+        }
+
+        .remark-container {
+          background:
+            radial-gradient(circle at top left, rgba(15, 123, 255, 0.12), transparent 32%),
+            linear-gradient(180deg, #eef3f8 0%, #e6edf7 100%);
+        }
+
+        .remark-slide-content {
+          box-sizing: border-box;
+          width: ${widthPx}px;
+          height: ${heightPx}px;
+          padding: ${defaults.paddingCss};
+          background: ${defaults.backgroundCss};
+          border: ${defaults.borderCss};
+          border-radius: ${defaults.borderRadiusCss};
+          box-shadow: ${defaults.boxShadowCss};
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 0.9rem;
+          color: ${defaults.colorCss};
+          font-family: ${defaults.fontFamilyCss};
+        }
+
+        .remark-slide-content.middle {
+          justify-content: center;
+        }
+
+        .remark-slide-content.center {
+          text-align: center;
+          align-items: center;
+        }
+
+        .remark-slide-content.center ul,
+        .remark-slide-content.center ol {
+          align-self: stretch;
+          text-align: left;
+        }
+
+        .remark-slide-content.inverse {
+          background: linear-gradient(135deg, #11203d, #1f345e);
+          color: #f7fbff;
+        }
+
+        .remark-slide-content.inverse a {
+          color: #9ed0ff;
+        }
+
+        .remark-slide-content h1,
+        .remark-slide-content h2,
+        .remark-slide-content h3 {
+          margin: 0;
+          line-height: 1.08;
+          letter-spacing: -0.03em;
+        }
+
+        .remark-slide-content h1 {
+          font-size: clamp(2.4rem, 4vw, 4rem);
+        }
+
+        .remark-slide-content h2 {
+          font-size: clamp(1.9rem, 3vw, 3rem);
+        }
+
+        .remark-slide-content h3 {
+          font-size: clamp(1.45rem, 2.4vw, 2.2rem);
+        }
+
+        .remark-slide-content p,
+        .remark-slide-content li,
+        .remark-slide-content blockquote {
+          margin: 0;
+          font-size: clamp(1.02rem, 1.3vw, 1.18rem);
+          line-height: 1.6;
+        }
+
+        .remark-slide-content ul,
+        .remark-slide-content ol {
+          margin: 0.15rem 0 0;
+          padding-left: 1.25rem;
+        }
+
+        .remark-slide-content pre {
+          margin: 0;
+          padding: 1rem 1.1rem;
+          border-radius: 18px;
+          background: #10213f;
+          color: #f7fbff;
+          overflow: auto;
+        }
+
+        .remark-slide-content code {
+          font-family: "Courier New", monospace;
+        }
+
+        .remark-slide-content img {
+          max-width: 100%;
+          display: block;
+        }
+      `.trim();
+    }
+
+    function getRemarkExportCanvasSize(model) {
+      const fallback = createDefaultPageDefaults("remark-slideshow");
+      const defaults = model?.pageDefaults || fallback;
+      const widthPx = Math.max(640, Math.round(parsePixelValue(defaults.widthCss) || parsePixelValue(fallback.widthCss) || 1120));
+      const heightPx = Math.max(360, Math.round(Number(defaults.minHeightPx) || fallback.minHeightPx || 630));
+      return { widthPx, heightPx };
+    }
+
+    function buildAspectRatioString(widthPx, heightPx) {
+      const safeWidth = Math.max(1, Math.round(widthPx) || 1);
+      const safeHeight = Math.max(1, Math.round(heightPx) || 1);
+      const divisor = greatestCommonDivisor(safeWidth, safeHeight);
+      return `${Math.round(safeWidth / divisor)}:${Math.round(safeHeight / divisor)}`;
+    }
+
+    function greatestCommonDivisor(a, b) {
+      let left = Math.abs(Math.round(a)) || 1;
+      let right = Math.abs(Math.round(b)) || 1;
+
+      while (right) {
+        const remainder = left % right;
+        left = right;
+        right = remainder;
+      }
+
+      return left || 1;
     }
 
     function triggerDownload(content, fileName) {
@@ -7432,6 +7676,7 @@ ${content || '<p data-remark-block="paragraph" data-remark-empty="true">Empty sl
 
     function cloneForRemarkSource(element) {
       const clone = element.cloneNode(true);
+      syncClonedGeometryWithPreview(element, clone);
       stripPreviewOnlyCodeDecorations(clone);
       clone.querySelectorAll("*").forEach((node) => {
         finalizeClonedTransform(node);
