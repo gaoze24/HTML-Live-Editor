@@ -1,0 +1,78 @@
+<h2>Desktop 16:9 Layout Direction</h2>
+<p class="subtitle">Target: 1920x1080 and other wide 16:9 screens. Pick the direction that feels closest to what you want.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. Current Layout, Better Alignment</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Toolbar row 1: document actions | row 2: context actions</div>
+          <div style="display:grid;grid-template-columns:36% 1fr;gap:14px;margin-top:14px;height:220px">
+            <div class="mock-sidebar">Source panel<br><br>Full height editor</div>
+            <div class="mock-content">Preview panel<br><br>Header controls stay on one aligned row<br><br><div class="placeholder">Preview iframe</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Conservative Polish</h3>
+      <p>Keep the existing two-panel structure, fix spacing, headers, and toolbar alignment without changing the interaction model.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Preview-First Desktop Workspace</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Compact toolbar: primary actions left | mode/status right</div>
+          <div style="display:grid;grid-template-columns:30% 1fr;gap:14px;margin-top:14px;height:220px">
+            <div class="mock-sidebar">Source panel<br><br>Narrower by default</div>
+            <div class="mock-content" style="border-width:3px">Large preview canvas<br><br><div class="placeholder" style="height:112px">More room for 16:9 slide/page preview</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Preview-First</h3>
+      <p>Make the preview the dominant workspace on large screens, with source still visible but less visually heavy.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. App-Like Command Bar</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Single command bar with grouped dropdowns and fewer visible controls</div>
+          <div style="display:grid;grid-template-columns:34% 1fr;gap:14px;margin-top:14px;height:220px">
+            <div class="mock-sidebar">Source panel</div>
+            <div class="mock-content">Preview panel<br><br><div class="placeholder">Cleaner chrome, more redesign risk</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Deeper Redesign</h3>
+      <p>Restructure the toolbar into a denser command bar. Cleaner long-term, but broader scope and higher regression risk.</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Recommendation</h4>
+    <ul>
+      <li>Choose B for this iteration if the editor is mainly used to edit and judge presentations visually.</li>
+      <li>It addresses the 16:9 desktop expectation while keeping changes scoped.</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Trade-off</h4>
+    <ul>
+      <li>A is safest but may leave the preview feeling too small.</li>
+      <li>C is attractive but should be a separate redesign pass.</li>
+    </ul>
+  </div>
+</div>
