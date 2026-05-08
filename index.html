@@ -530,11 +530,13 @@
 
     .panel__header {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 0.85rem;
-      padding: 0.78rem 1.05rem;
+      row-gap: 0.5rem;
       min-height: 3.4rem;
+      padding: 0.78rem 1.05rem;
       border-bottom: 1px solid var(--panel-border);
       background: rgba(255, 251, 246, 0.46);
       flex-shrink: 0;
@@ -574,7 +576,7 @@
       align-items: center;
       justify-content: flex-end;
       gap: 0.45rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       flex-shrink: 0;
     }
 
@@ -1011,10 +1013,6 @@
       .toolbar__group {
         gap: 0.26rem;
         padding: 0.16rem;
-      }
-
-      .panel__header-actions {
-        flex-wrap: nowrap;
       }
     }
 
