@@ -998,6 +998,12 @@
       }
     }
 
+    @media (min-width: 1440px) {
+      .workspace {
+        grid-template-columns: minmax(16rem, var(--source-pane-size, 22rem)) 0.8rem minmax(0, 1fr);
+      }
+    }
+
     @media (max-width: 1260px) {
       #pageControlsGroup {
         flex-basis: 15rem;
